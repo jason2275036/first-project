@@ -136,6 +136,55 @@ Begin VB.Form DWE2532B
          Top             =   4400
          Width           =   3255
       End
+	  Begin VB.Frame Frame_Ship 
+         Caption         =   "Shipment"
+         Height          =   735
+         Left            =   1320
+         TabIndex        =   79
+         Top             =   4920
+         Width           =   3135
+         Begin VB.OptionButton Option3 
+            Caption         =   "S+G"
+            Height          =   255
+            Left            =   2160
+            TabIndex        =   82
+            Top             =   360
+            Width           =   855
+         End
+         Begin VB.OptionButton Option2 
+            Caption         =   "Peak"
+            Height          =   255
+            Left            =   1200
+            TabIndex        =   81
+            Top             =   360
+            Width           =   855
+         End
+         Begin VB.OptionButton Option1 
+            Caption         =   "FRC"
+            Height          =   255
+            Left            =   240
+            TabIndex        =   80
+            Top             =   360
+            Width           =   975
+         End
+      End
+      Begin VB.CheckBox PEAK_Ship_Check 
+         Caption         =   "PEAK Shipment"
+         Height          =   255
+         Left            =   1920
+         TabIndex        =   78
+         Top             =   5400
+         Visible         =   0   'False
+         Width           =   2295
+      End
+      Begin VB.CheckBox EOL_Print_Check 
+         Caption         =   "EOL Label Print"
+         Height          =   255
+         Left            =   4800
+         TabIndex        =   77
+         Top             =   4200
+         Width           =   1695
+      End
       Begin VB.TextBox D_SWWCUST_CD 
          Appearance      =   0  '평면
          BackColor       =   &H00C0FFFF&
@@ -1916,7 +1965,7 @@ I_REV_NO_RTN:
     If I_DESC_NM = "" Then I_DESC_NM = Trim(SSDATA!cdesc_tx4)
     If I_DESC_NM = "" Then I_DESC_NM = Trim(SSDATA!pdesc_nm) + vbCrLf + Trim(SSDATA!bake)  ' Manually input
     I_BOXUNIT_NB = Trim(SSDATA!box_unit_qt)
-    If SSDATA!prod_gubun = "TR" Then Call SET_TRAY_BOXUNIT(Trim(SSDATA!ipart_no), Trim(SSDATA!Prev_No))  ' Tray인 경우 NTK에 대한 Box Unit
+    If SSDATA!prod_gubun = "TR" Then Call SET_TRAY_BOXUNIT(Trim(SSDATA!ipart_no), Trim(SSDATA!prev_no))  ' Tray인 경우 NTK에 대한 Box Unit
     
     If Trim(SSDATA!mater_nm) = "" Then
         MsgBox IIf(GLO_KOR_VISIBLE, "업무표준화코드에서 원료에 관한 정보가 없습니다." & vbCrLf & "업무표준화 정보를 확인하십시요", _
@@ -2274,7 +2323,7 @@ Private Sub C_PO_NO_LostFocus()
     
     If SSCODE.RecordCount > 0 Then
         I_PART_NO = Trim(SSCODE!ipart_no)
-        I_REV_NO = Trim(SSCODE!Prev_No)
+        I_REV_NO = Trim(SSCODE!prev_no)
         I_METERIAL_NM = Trim(SSCODE!material)
         
         varBranchCD = Trim(SSCODE!BRANCH_CD)
@@ -2286,7 +2335,7 @@ Private Sub C_PO_NO_LostFocus()
         I_COLOR_NM = Trim(SSCODE!Color)
         I_TOTAL_QT = Trim(SSCODE!outdirect_qt)
         I_BOXUNIT_NB = Trim(SSCODE!box_unit_qt)
-        If SSCODE!prod_gubun = "TR" Then Call SET_TRAY_BOXUNIT(Trim(SSCODE!ipart_no), Trim(SSCODE!Prev_No))  ' Tray인 경우 NTK에 대한 Box Unit
+        If SSCODE!prod_gubun = "TR" Then Call SET_TRAY_BOXUNIT(Trim(SSCODE!ipart_no), Trim(SSCODE!prev_no))  ' Tray인 경우 NTK에 대한 Box Unit
         
         I_PART_NO.Enabled = True
         I_REV_NO.Enabled = True
@@ -2440,6 +2489,14 @@ Private Sub ComboLoad_ITEM_NO(varProdCD As String, varCustomCd As String)
         End If
         .ListIndex = 0
     End With
+End Sub
+
+Private Sub CHK_INSMP_Click()
+    If CHK_INSMP.Value = 1 Then
+        Frame_Ship.Visible = True
+    Else
+        Frame_Ship.Visible = False
+    End If
 End Sub
 
 Private Sub I_BOXUNIT_NB_LostFocus()
@@ -2746,7 +2803,16 @@ Private Sub CMD_PRINT_Click()
         If GLO_COMP_CD = "DW" And GLO_DEPT_CD = "10011" Then '(현재는 IT Center에서만 라벨 출력 테스트 용도로 사용중)
             Call GF_SocketConnect(Lantype_Sck, "BC_PRT0048_IP") 'IT센터 바코드 프린터 (테스트장비)
         ElseIf GLO_COMP_CD = "FU" And ChkLANPRT.Value <> 1 Then
-            Call GF_SocketConnect(Lantype_Sck, "FRC_BCPRT_3F_2_IP")   'FRC Barcode Printer 3F IP For PEAK Label
+		If EOL_Print_Check = 1 Then
+                Call GF_SocketConnect(Lantype_Sck, "FRC_BCPRT_3F_EOL_IP")   'FRC Barcode Printer EOL IP For PEAK Label
+            Else
+                Select Case Trim(Right(C_CUSTOM_CD, 10))
+                Case "20180", "21844", "10507", "21832", "10536", "10519"  '2014-04-07 TSMC (TAIWAN SEMICONDUCTOR MANUFACTURING CO.,L) ?? by ICS_jwkim&IS_Junmo, 2018-11-06 add Sites TSMC FAB2, TSMC FAB30 by Jim Chen, 2020-04-13 add Sites TSMC Fab07 and P010
+                    Call GF_SocketConnect(Lantype_Sck, "FRC_BCPRT_3F_IP")   'FRC Barcode Printer 3F IP For DW Label
+                Case Else
+                    Call GF_SocketConnect(Lantype_Sck, "FRC_BCPRT_3F_2_IP")   'FRC Barcode Printer 3F IP For PEAK Label
+                End Select
+            End If
         Else
             Call GF_SocketConnect(Lantype_Sck, "BC_PRT0048_IP")
         End If
@@ -2857,8 +2923,8 @@ Private Function CHECK_OUTData() As String
             isError = True
         End If
         
-        If Trim(rev_no) <> Trim(ssTemp!Prev_No) Then
-            strMsg = strMsg & "REV#가 일치하지 않습니다. (출하지시 정보:" & ssTemp!Prev_No & ")" & vbCrLf
+        If Trim(rev_no) <> Trim(ssTemp!prev_no) Then
+            strMsg = strMsg & "REV#가 일치하지 않습니다. (출하지시 정보:" & ssTemp!prev_no & ")" & vbCrLf
             isError = True
         End If
         
@@ -3049,7 +3115,7 @@ Private Sub CMD_SAVE_Click()
         'SITE 별 선택
         Select Case Trim(Right(C_CUSTOM_CD, 10))
         
-        Case "20180", "21844", "10507", "21832"  '2014-04-07 TSMC (TAIWAN SEMICONDUCTOR MANUFACTURING CO.,L) 라벨 by ICS_jwkim&IS_Junmo, 2018-11-06 add Sites TSMC FAB2, TSMC FAB30 by Jim Chen
+        Case "20180", "21844", "10507", "21832", "10519", "10536", "10558"  '2014-04-07 TSMC (TAIWAN SEMICONDUCTOR MANUFACTURING CO.,L) 라벨 by ICS_jwkim&IS_Junmo, 2018-11-06 add Sites TSMC FAB2, TSMC FAB30 by Jim Chen
              If C_INV_NO = "" And GLO_COMP_CD = "FU" Then   '20181008 jeenie & liam by FRCUNION
                 MsgBox IIf(GLO_KOR_VISIBLE, "INVOICE NO를 입력하지 않았습니다", "You have not entered INVOICE NO"), vbExclamation
                 Exit Sub
@@ -3178,6 +3244,20 @@ Private Sub CMD_SAVE_Click()
                     Label_Data(Label_Cnt) = sFormatTx
                 Next j
             Next i
+		
+        Case "20233" '2021-06-30 ASE(S)BY FRC Jim Chen
+            If Trim(C_LOT_ID) = "" Then
+                If MsgBox("RT No가 없습니다. 계속진행하시겠습니까?", vbYesNo) = vbNo Then Exit Sub
+            End If
+                
+            For i = Val(I_START_CT_NO) To Val(I_END_CT_NO)
+                For j = 1 To Val(I_SET_QT)
+                    Call T4_ASE_SGP_BoxLabel_Print(i, Val(I_TOTAL_CT_NO))
+                    Label_Cnt = Label_Cnt + 1
+                    Label_Data(Label_Cnt) = sFormatTx
+                Next j
+            Next i
+            
             
         Case "20779", "20276", "22169", "21643" 'ASECL  '2014-01-22 by S+G kimsi, 'ASE MATL CL (20276) 2020-02-17 by FRC IT Jim Chen & CPL Liam Bae, 'ASE CHUNG-LI(22169), ASE CHUNG-LI.(21643) by 2022.09.08 CPL oskwon
             For i = Val(I_START_CT_NO) To Val(I_END_CT_NO)
@@ -3217,7 +3297,7 @@ Private Sub CMD_SAVE_Click()
                 Next j
             Next i
             
-        Case "21979" And GLO_COMP_CD = "FU"  'MICRON TAIWAN   '2019-11-08 by FRC IT Jim Chen & CPL Liam Bae
+        Case "21979", "20879", "22204" And GLO_COMP_CD = "FU"  'MICRON TAIWAN   '2019-11-08 by FRC IT Jim Chen & CPL Liam Bae
             For i = Val(I_START_CT_NO) To Val(I_END_CT_NO)
                 For j = 1 To Val(I_SET_QT)
                     Call T4_MICRONTW_BoxLabel_Print(i, Val(I_TOTAL_CT_NO))
@@ -3225,7 +3305,24 @@ Private Sub CMD_SAVE_Click()
                     Label_Data(Label_Cnt) = sFormatTx
                 Next j
             Next i
-            
+        Case "22206" And GLO_COMP_CD = "FU"  'MICRON Malasia Sdn Bhd   '2021-06-11 by FRC IT Jim Chen & CPL Liam Bae
+        For i = Val(I_START_CT_NO) To Val(I_END_CT_NO)
+            For j = 1 To Val(I_SET_QT)
+                Call T4_Micron_SGP_BoxLabel_Print(i, Val(I_TOTAL_CT_NO))
+                Label_Cnt = Label_Cnt + 1
+                Label_Data(Label_Cnt) = sFormatTx
+            Next j
+        Next i
+        
+        Case "20921" And GLO_COMP_CD = "FU"  'Walton   '2021-06-18 by FRC IT Jim Chen & CPL Liam Bae
+        For i = Val(I_START_CT_NO) To Val(I_END_CT_NO)
+            For j = 1 To Val(I_SET_QT)
+                Call T4_Walton_BoxLabel_Print(i, Val(I_TOTAL_CT_NO))
+                Label_Cnt = Label_Cnt + 1
+                Label_Data(Label_Cnt) = sFormatTx
+            Next j
+        Next i
+		
         Case "20860" And GLO_COMP_CD = "FU"  'POWERTECH(T)20860   '2020-05-14 by FRC IT Jim Chen & CPL Liam Bae
             For i = Val(I_START_CT_NO) To Val(I_END_CT_NO)
                 For j = 1 To Val(I_SET_QT)
@@ -3263,6 +3360,15 @@ Private Sub CMD_SAVE_Click()
                     Label_Data(Label_Cnt) = sFormatTx
                 Next j
             Next i
+		Case "20908", "21547", "21987" And GLO_COMP_CD = "FU"  'SIGURD 20908, 21547, 21987 '2022-07-18 by FRC IT JJ Cheng & CPL Liam Bae
+            For i = Val(I_START_CT_NO) To Val(I_END_CT_NO)
+                For j = 1 To Val(I_SET_QT)
+                    Call T4_SIGUARD_BoxLabel_Print(i, Val(I_TOTAL_CT_NO))
+                    Label_Cnt = Label_Cnt + 1
+                    Label_Data(Label_Cnt) = sFormatTx
+            Next j
+        Next i
+            
             
         Case Else   'Default
             Select Case True
@@ -3396,7 +3502,7 @@ Private Function CHECK_INPUT_DATA(varPartNo As String, varRevNo As String, varLo
     End If
 
     For i = 0 To ssTemp.RecordCount - 1
-        If varPartNo = ssTemp!ipart_no And varRevNo = ssTemp!Prev_No Then
+        If varPartNo = ssTemp!ipart_no And varRevNo = ssTemp!prev_no Then
             CHECK_INPUT_DATA = True
             Exit For
         End If
@@ -3459,6 +3565,12 @@ Private Sub Form_Load()
     C_LOT_ID.Visible = False
     
     'GLO_COMP_CO = IIf(GLO_COMP_CD = "FU", "MADE IN TAIWAN", "MADE IN KOREA")    'Country of Original 변경
+    
+	Hide Shippment option fram by default
+    Frame_Ship.Visible = False
+    
+    'Shippment Option Default on FRC
+    Option1.Value = True
     
     Title.Caption = IIf(GLO_KOR_VISIBLE, "BARCODE LABEL 출력", "BARCODE LABEL PRINT")
     FramePRT.Caption = IIf(GLO_KOR_VISIBLE, "출력구분", "Print Sort")
@@ -3780,7 +3892,17 @@ Private Sub T4_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As Intege
     Dim varCUSTDWG_no        As String
     Dim varPrdITEM_no           As String
     
+    Dim varQApassDT             As String
+    
+    Dim varEXPDT                As String
+    
+    'QA Pass Date
+    varQApassDT = Format(SHIP_DATE, "yyyy.mm.dd")
+    
     varLotNo = C_LOT_NO
+
+   
+    varEXPDT = Format(DateAdd("yyyy", 3, SHIP_DATE), "MM-dd-YYYY")
 
     'Check last C/T Qty
     If varCartonNo = varTotalCartonNo Then
@@ -3943,6 +4065,34 @@ Private Sub T4_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As Intege
         sFormatTx = sFormatTx + "COO" + vbCr
         sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0840" + "0730"
         sFormatTx = sFormatTx + ": " + GLO_COMP_CO + vbCr
+		
+		'QA Pass Date
+        sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0840" + "0980" + "( QA PASS : " + varQApassDT + " )" + vbCr
+        
+    '2021-11-10 CPL Liam request KINSUS format
+    ElseIf Trim(Right(C_CUSTOM_CD, 10)) = "10504" Or Trim(Right(C_CUSTOM_CD, 10)) = "21126" Then
+
+        'SHIP'G LOT NO
+        sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0590" + "0980"
+        sFormatTx = sFormatTx + "SHIP'G LOT NO." + vbCr
+        sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0590" + "0730"
+        sFormatTx = sFormatTx + ": " + C_PO_NO + "-" + Format(SHIP_DATE, "mmddyy") + vbCr
+        
+        'EXP Date
+        sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0660" + "0980"
+        sFormatTx = sFormatTx + "EXP DATE" + vbCr
+        sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0660" + "0730"
+        sFormatTx = sFormatTx + ": " + varEXPDT + vbCr
+        
+        'COO
+        sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0730" + "0980"
+        sFormatTx = sFormatTx + "COO" + vbCr
+        sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0730" + "0730"
+        sFormatTx = sFormatTx + ": " + "MADE IN TAIWAN" + vbCr
+        
+        'QA Pass Date
+        sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0800" + "0980" + "( QA PASS : " + varQApassDT + " )" + vbCr
+
     Else
         'SHIP'G LOT NO
         sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0590" + "0980"
@@ -4005,9 +4155,13 @@ Private Sub TR_KYEC_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     Dim yyyy                    As String
     Dim MM                      As String
     Dim dd                      As String
+	Dim varQApassDT             As String
     
     Dim charRowAdd(5 To 48)     As Integer
     
+	'QA Pass Date
+    varQApassDT = Format(SHIP_DATE, "yyyy.mm.dd")
+	
     varLotNo = C_LOT_NO
         
     varMFGDT = Format(GF_CHECK_LotDate(Trim(D_PROD_KB), varLotNo), "@@@@-@@-@@") 'Lot 생성일자를 가져옴
@@ -4108,6 +4262,9 @@ Private Sub TR_KYEC_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     
     ' Barcode 표시              -출력각- -type-  --두께--   -높이-   -row-    -col-          * 두께 : 굵은 두께 + 얇은 두께
    
+   '2D BARCODE(QR CODE)   'aW a=3은 180도회전  ffff 높을수록 아래 gggg 높을수록 왼쪽으로
+   sFormatTx = sFormatTx & "3W1D44000072003002HM," & " " & Trim(C_ITEM_NO) & ";" & C_PO_NO & "-" & Format(SHIP_DATE, "mmddyy") & ";" & varUnitQty & ";" & Trim(varEXPDT) & ";" & C_PO_NO & Chr$(13)
+   
    'Title
     sFormatTx = sFormatTx + Angle180 + "911" + "006" + "0080" + "0850"
     sFormatTx = sFormatTx + "PEAK SHIPPING LABEL" & vbCr
@@ -4173,6 +4330,9 @@ Private Sub TR_KYEC_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     sFormatTx = sFormatTx + "COO" + vbCr
     sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0840" + "0730"
     sFormatTx = sFormatTx + ": " + GLO_COMP_CO + vbCr
+    
+	'QA Pass Date
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0870" + "0980" + "( QA PASS : " + varQApassDT + " )" + vbCr
     
     'C/NO
     sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0920" + "0980"
@@ -4830,6 +4990,24 @@ Private Sub T4_ASEK_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     'varEXPDT = Replace(DateAdd("yyyy", 5, varMFGDT), "-", "")   '2018.10.24 FRC 요청으로 5년 통일
     varMFGDT = Replace(varMFGDT, "-", "")
     varEXPDT = Replace(varEXPDT, "-", "")
+	
+    'PEAK Shipment Check for Lot# and DOM
+    
+    'If PEAK_Ship_Check = 1 Then
+        'Peak_varLotNo = Format(Trim(SHIP_DATE), "mmddyy")
+        'varPeakMFGDT = Left(varMFGDT, 6) & "01"
+    'End If
+    
+    'PEAK Shipment Check for Lot# and DOM
+    If Option2.Value = True Then
+        Peak_varLotNo = Format(Trim(SHIP_DATE), "mmddyy")
+        varPeakMFGDT = Left(varMFGDT, 6) & "01"
+    'S+G Shipment Check for Lot#
+    ElseIf Option3.Value = True Then
+        Peak_varLotNo = Replace(Replace(C_LOT_NO, "-", ""), "F", "D")
+        
+    End If
+    
     'Check last C/T Qty
     If varCartonNo = varTotalCartonNo Then
         varUnitQty = CStr(Val(I_TOTAL_QT) Mod Val(I_BOXUNIT_NB))
@@ -4900,6 +5078,12 @@ Private Sub T4_ASEK_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
         
     If (Trim(Right(C_CUSTOM_CD, 10)) = "20015" Or Trim(Right(C_CUSTOM_CD, 10)) = "20163") And isAgentPeak = True Then 'AgentPeak(기존S+G)의 경우 ASE KHH 금형 번호 고정
         varOEMMold_no = "S1"
+    End If
+    
+	'FRC Part# FT189010
+    If Trim( I_PART_NO.Text) = "FT189010" And CHK_INSMP = 1 Then
+        varOEMMold_no = "S1"
+        varLotNo = Replace(varLotNo, "F", "D")
     End If
     
     If Val(I_START_CT_NO) = Val(I_END_CT_NO) Then
@@ -5017,9 +5201,10 @@ Private Sub T4_ASEK_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0380" + "1000"
     sFormatTx = sFormatTx + "LOT NO" + vbCr
     sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0385" + "0710"   'Code 128 SubSET B
-    sFormatTx = sFormatTx & "B" & varLotNo & vbCr
+	
+	sFormatTx = sFormatTx & "B" & IIf(Option2.Value = True Or Option3.Value = True, Peak_varLotNo, varLotNo) & vbCr
     sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0425" + "0710"
-    sFormatTx = sFormatTx & varLotNo & vbCr
+    sFormatTx = sFormatTx & IIf(Option2.Value = True Or Option3.Value = True, Peak_varLotNo, varLotNo) & vbCr
     
     'Mold No
     sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0380" + "0317"
@@ -5524,6 +5709,14 @@ Private Sub T4_MICRONTW_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo 
     sFormatTx = sFormatTx + "CUST'R PO" + vbCr
     sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0220" + "0730"
     sFormatTx = sFormatTx + ": " + C_PO_NO + vbCr
+	
+    'MICRON SGP and MICRON US add customer PO code 128 barcode
+    If Trim(Right(C_CUSTOM_CD, 10)) = "20910" Then 'Or Trim(Right(C_CUSTOM_CD, 10)) = "20879" Then
+        sFormatTx = sFormatTx + Angle180 + "e" + varRate + "050" + "0220" + "0400"   'Code 128 SubSET B
+        sFormatTx = sFormatTx & "B" & C_PO_NO + vbCr
+    Else
+    
+    End If
 
     'CUST'R P/N
     sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0280" + "0980"
@@ -6639,7 +6832,7 @@ Private Sub T4_SPIL_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     strLOT_ID = ""
     If SSDATA.RecordCount > 0 Then
         Do Until SSDATA.EOF
-            If Trim(SSDATA!ipart_no) = Trim(I_PART_NO) And Trim(SSDATA!Prev_No) = Trim(I_REV_NO) Then strLOT_ID = Trim(SSDATA!LOT_ID)
+            If Trim(SSDATA!ipart_no) = Trim(I_PART_NO) And Trim(SSDATA!prev_no) = Trim(I_REV_NO) Then strLOT_ID = Trim(SSDATA!LOT_ID)
             SSDATA.MoveNext
         Loop
     End If
@@ -6724,6 +6917,14 @@ Private Sub T4_SPIL_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     
     ' 외부 Box 그리기           -- reserved --   -Row-    -Col-   -box- -수평길이+수직길이- -- line 폭 --
     sFormatTx = sFormatTx + "1X11" + "000" + "0000" + "0030" + "b" + "0980" + "0950" + "0004" + "0004" + vbCr
+	
+	' Barcode 줄 긋기    -- reserved --   -Row-    -Col-   -line-  -길이 + 두께-
+    
+    '2D QR Code Request by FRC CPL Liam 2020-06-05
+    If GLO_COMP_CD = "FU" Then
+        sFormatTx = sFormatTx & "3W1D66000042002902HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)
+    End If
+	
     '2D BARCODE(QR CODE)    'aW a=3은 180도회전  ffff 높을수록 아래 gggg 높을수록 왼쪽으로, b,c = Module Size
     'sFormatTx = sFormatTx & "3W1D33000030502302MA," & C_ITEM_NO & ";" & Trim(Replace(varLOTNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)  'FRC '2D QR Code Request by FRC CPL Liam 2020-06-05
     sFormatTx = sFormatTx & "3W1D55000063002202MA," & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)
@@ -6732,7 +6933,11 @@ Private Sub T4_SPIL_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     sFormatTx = sFormatTx + "1X11" + "000" + "0100" + "0030" + "l" + "0980" + "0004" + vbCr
     
     sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0030" + "l" + "0980" + "0004" + vbCr
-    sFormatTx = sFormatTx + "1X11" + "000" + "0310" + "0030" + "l" + "0980" + "0004" + vbCr
+    If GLO_COMP_CD = "FU" Then
+        sFormatTx = sFormatTx + "1X11" + "000" + "0310" + "0330" + "l" + "0980" + "0004" + vbCr
+    Else
+        sFormatTx = sFormatTx + "1X11" + "000" + "0310" + "0030" + "l" + "0980" + "0004" + vbCr
+    End If
     sFormatTx = sFormatTx + "1X11" + "000" + "0430" + "0030" + "l" + "0980" + "0004" + vbCr
     'sFormatTx = sFormatTx + "1X11" + "000" + "0550" + "0030" + "l" + "0980" + "0004" + vbCr    test
     sFormatTx = sFormatTx + "1X11" + "000" + "0550" + "0245" + "l" + "0765" + "0004" + vbCr
@@ -6742,8 +6947,21 @@ Private Sub T4_SPIL_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     sFormatTx = sFormatTx + "1X11" + "000" + "0880" + "0030" + "l" + "0980" + "0004" + vbCr
     
     '세로줄
-    sFormatTx = sFormatTx + "1X11" + "000" + "0430" + "0245" + "l" + "0004" + "0380" + vbCr
+    
+    '2nd vertial line
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0430" + "0245" + "l" + "0004" + "0380" + vbCr
     sFormatTx = sFormatTx + "1X11" + "000" + "0100" + "0760" + "l" + "0004" + "0850" + vbCr
+    
+    '3rd vertial line
+    If GLO_COMP_CD = "FU" Then
+       'If Trim(Right(C_CUSTOM_CD, 10)) = "21311" Then
+            'sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0330" + "l" + "0004" + "0365" + vbCr
+        'Else
+            sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0330" + "l" + "0004" + "0240" + vbCr
+        'End If
+    End If
+    '4th vertial line
+    sFormatTx = sFormatTx + "1X11" + "000" + "0670" + "0245" + "l" + "0004" + "0140" + vbCr
         
    'Title
     sFormatTx = sFormatTx + Angle180 + "911" + "005" + "0080" + "0980"
@@ -8344,7 +8562,11 @@ Private Sub TR_TSMC_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     Dim varCustSuppCD           As String
     Dim varMFGDT                As String
     Dim varMoldStamp           As String
+	Dim varOEMMold_no           As String
     Dim varInvoiceNo    As String
+	Dim varQApassDT               As String
+    
+    varQApassDT = Format(SHIP_DATE, "yyyy.mm.dd")
     
     varInvoiceNo = C_INV_NO
     varMFGDT = Format(GF_CHECK_LotDate(Trim(D_PROD_KB), C_LOT_NO), "@@@@-@@-@@") 'Lot 생성일자를 가져옴
@@ -8370,6 +8592,52 @@ Private Sub TR_TSMC_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     
     ' MOLD STAMP
     '===========================================================================
+	If GLO_COMP_CD = "FU" Then
+        sql$ = " select distinct a.prod_cd, b.prod_gubun, a.mold_no, a.mold_desc, " & vbCrLf
+        sql$ = sql$ & " nvl((select mold_stamp from prd_mold_1 f where f.comp_cd = a.comp_cd and f.bsns_cd = a.bsns_cd and f.mold_no =  b.mold_no), ' ') mold_stamp " & vbCrLf
+        sql$ = sql$ & " from PRD_MAST_1_VIEW a, PRD_WORK_11 b " & vbCrLf
+        sql$ = sql$ & " where a.comp_cd = '" & GLO_COMP_CD & "' " & vbCrLf
+        sql$ = sql$ & " and a.bsns_cd = '" & GLO_BSNS_CD & "' " & vbCrLf
+        sql$ = sql$ & " and a.prod_cd = b.prod_cd "
+        sql$ = sql$ & " and a.comp_cd = b.comp_cd and a.bsns_cd = b.bsns_cd " & vbCrLf
+        If varMoldNo = "ASSEMBLY" Then   'Assembly 제품의 경우 Main 제품의 LOT로 비교한다.
+            sql$ = sql$ & " and   b.outlot_no in (select distinct outlot_no from prd_work_31 where lot_no= '" & Replace(Trim(C_LOT_NO), "-", "") & "' and main_kb ='1' ) " & vbCrLf
+        Else
+            sql$ = sql$ & " and   b.outlot_no = '" & Replace(Trim(C_LOT_NO), "-", "") & "' " & vbCrLf
+        End If
+        
+        Set SSDATA = Nothing
+        SSDATA.Open sql$, DB_User
+        
+        If SSDATA.RecordCount = 0 Then
+            varMoldStamp = ""
+        Else
+            varMoldStamp = Trim(SSDATA!mold_stamp)
+        End If
+        SSDATA.Close
+     
+        'Assembly P-Bin Management and system will no write any main part information in Prd_work_31. Thus we need to get main part in Prd_BOM_1
+        'FRC Jim Chen 2020/02/06
+        If UCase(varMoldNo) = "ASSEMBLY" Then     'FRCUNION은 Add varOEMMold_no by jim
+             sql$ = " select distinct a.prod_cd, a.mold_no, a.mold_desc " & vbCrLf
+             sql$ = sql$ & " from PRD_MAST_1_VIEW a" & vbCrLf
+             sql$ = sql$ & " where a.comp_cd = '" & GLO_COMP_CD & "' " & vbCrLf
+             sql$ = sql$ & " and a.bsns_cd = '" & GLO_BSNS_CD & "' " & vbCrLf
+'             sql$ = sql$ & " and a.prod_cd = (select child_cd from PRD_BOM_1 where parent_cd =(select distinct P_PROD_CD from prd_work_31 where LOT_NO ='" & Trim(C_LOT_NO) & "')" & vbCrLf
+'             sql$ = sql$ & "and child_cd like 'TR%')" & vbCrLf
+             sql$ = sql$ & " and a.mold_no = (SELECT DISTINCT MASTER_MOLD_NO from PRD_WORK_1 where LOT_NO  ='" & Trim(C_LOT_NO) & "')" & vbCrLf
+         
+             Set SSDATA = Nothing
+             SSDATA.Open sql$, DB_User
+             
+             If SSDATA.RecordCount = 0 Then
+                 varOEMMold_no = ""
+             Else
+                 varOEMMold_no = str(Int(Right(Trim(SSDATA!mold_desc), 2)))
+             End If
+             SSDATA.Close
+        End If
+    else
     sql$ = " select distinct a.prod_cd, b.prod_gubun, a.mold_no, a.mold_desc, " & vbCrLf
     sql$ = sql$ & " nvl((select mold_stamp from prd_mold_1 where comp_cd = '" & GLO_COMP_CD & "' and bsns_cd = '" & GLO_BSNS_CD & "' and mold_no = nvl((select distinct c.mold_no from PRD_WORK_11 c where c.prod_cd = b.prod_cd  and c.outlot_no = '" & Replace(Trim(C_LOT_NO), "-", "") & "'), ' ')),' ') mold_stamp "
     sql$ = sql$ & " from PRD_MAST_1_VIEW a, PRD_WORK_11 b " & vbCrLf
@@ -8379,6 +8647,7 @@ Private Sub TR_TSMC_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     sql$ = sql$ & " and a.comp_cd = '" & GLO_COMP_CD & "' " & vbCrLf
     sql$ = sql$ & " and a.bsns_cd = '" & GLO_BSNS_CD & "' " & vbCrLf
     sql$ = sql$ & " and a.comp_cd = b.comp_cd and a.bsns_cd = b.bsns_cd " & vbCrLf
+	End If
     
     Set SSDATA = Nothing
     SSDATA.Open sql$, DB_User
@@ -8502,6 +8771,16 @@ Private Sub TR_TSMC_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As I
     sFormatTx = sFormatTx + sText1 + vbCr
     sFormatTx = sFormatTx + Angle180 + "911" + "002" + "0555" + "0980" + "DOM : " + sText1 + vbCr
     
+'QA ACCEPT STAMP
+'                         Rotation                       ROW     Col                           Radius
+    'sFormatTx = sFormatTx + "1" + "X" + "11" + "000" + "0400" + "0220" + "C" + "001" + "0001" + "0088" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0400" + "0250"
+    'sFormatTx = sFormatTx & "QA" & vbCr
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0440" + "0280"
+    'sFormatTx = sFormatTx & "ACCEPT" & vbCr
+'  QA Pass Date
+    sFormatTx = sFormatTx + Angle180 + "911" + "002" + "0555" + "0380" + "( QA PASS : " + varQApassDT + " )" + vbCr
+    'reco'
     sFormatTx = sFormatTx + "E" + vbCr
 
 End Sub
@@ -9004,3 +9283,1389 @@ Private Sub T4_ASESH_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As 
     sFormatTx = sFormatTx + "E" + vbCr
 End Sub
 
+Private Sub T4_Micron_SGP_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As Integer)
+    '======================================================================
+    ' 2021. 06. 11
+    ' Customer : Micron SINGAPORE
+    ' Author : FRC IT Jim Chen
+    '======================================================================
+    Dim sql                     As String
+    Dim sText1                  As String
+    Dim sText2                  As String
+    Dim varLotNo               As String
+    Dim varMoldSeq              As String
+    Dim varUnitQty              As String
+    Dim varQApass               As String
+    Dim subSpace                As String
+    Dim varMFGDT                As String
+    Dim varEXPDT                As String
+    Dim varDWG_no               As String
+    Dim varOEMiPART_NO          As String
+    Dim varOEMiRev_NO           As String
+    Dim strLOT_ID               As String
+    
+    Dim yyyy                    As String
+    Dim MM                      As String
+    Dim dd                      As String
+    
+    Dim charRowAdd(5 To 48)     As Integer
+    
+    varLotNo = C_LOT_NO
+    varMoldSeq = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2)
+    
+    varMFGDT = Format(GF_CHECK_LotDate(Trim(D_PROD_KB), varLotNo), "@@@@@@@@") 'Lot 생성일자를 가져옴
+    'varMFGDT = Left(varMFGDT, 6) & "01" '20170918 생산월 01로 고정 표시 ihson , CPL hilee 2020.11.24 실제 생산일자를 표시함 (모든 SPIL SITE 공통적용)
+    'Check last C/T Qty
+    If varCartonNo = varTotalCartonNo Then
+        varUnitQty = CStr(Val(I_TOTAL_QT) Mod Val(I_BOXUNIT_NB))
+        If varUnitQty = "0" Then varUnitQty = I_BOXUNIT_NB
+    Else
+        varUnitQty = I_BOXUNIT_NB
+    End If
+        
+    If Val(I_START_CT_NO) = Val(I_END_CT_NO) Then
+        If Val(Result_QT) > 0 Then I_BOXUNIT_NB = Result_QT
+    End If
+    
+      ' 해당월의 출하 횟수를 확인
+    ' Display Shipping Date for the C_LOT_NO for Delivery Order for the Lot No
+    
+    sql$ = "select ipart_no , prev_no,   'P' || '" & Right(Format(SHIP_DATE, "yyyymmdd"), 5) & "' || trim(to_char(ROWNUM, '00')) as LOT_ID"
+    sql$ = sql$ & " from ( select distinct ipart_no, prev_no from MKT_OUT_11 a where a.comp_cd = 'SG' and a.bsns_cd = '11' and a.outorder_no ='" & Trim(C_LOT_ID) & "'"
+    sql$ = sql$ & ")"
+        
+    Set SSDATA = Nothing
+    SSDATA.Open sql$, DB_User
+            
+    strLOT_ID = ""
+    If SSDATA.RecordCount > 0 Then
+        Do Until SSDATA.EOF
+            If Trim(SSDATA!ipart_no) = Trim( I_PART_NO) And Trim(SSDATA!prev_no) = Trim(I_REV_NO) Then strLOT_ID = Trim(SSDATA!LOT_ID)
+            SSDATA.MoveNext
+        Loop
+    End If
+    SSDATA.Close
+    If Trim(strLOT_ID) = "" Then strLOT_ID = "P" & Right(Format(SHIP_DATE, "yyyymmdd"), 5) & "01"
+
+    '===========================================================================
+    ' Drawing No 확인
+    '===========================================================================
+    sql$ = "select nvl(a.smp_part_no,' ') as smp_part_no,  nvl(a.smp_rev_no,' ') as smp_rev_no, " & vbCrLf
+    sql$ = sql$ & " nvl((select distinct dwg_no from PRD_MAST_1_VIEW f  where f.comp_cd = a.comp_cd and f.bsns_cd = a.bsns_cd and a.prev_no=f.prev_no and a.iPART_NO=f.iPART_NO ),' ') as dwg_no from MKT_CUST_2 a" & vbCrLf
+    sql$ = sql$ & " where a.custom_cd ='" & Trim(Right(C_CUSTOM_CD, 10)) & "'" & vbCrLf
+    sql$ = sql$ & " and a.prev_no='" & I_REV_NO & "' and a.iPART_NO='" &  I_PART_NO & "'"
+    sql$ = sql$ & " and comp_cd = '" & GLO_COMP_CD & "' " & vbCrLf
+    sql$ = sql$ & " and bsns_cd = '" & GLO_BSNS_CD & "' " & vbCrLf
+        
+    Set SSDATA = Nothing
+    SSDATA.Open sql$, DB_User
+    
+    varOEMiPART_NO = ""
+    varOEMiRev_NO = ""
+    varDWG_no = ""
+    If SSDATA.RecordCount > 0 Then
+        varDWG_no = SSDATA!dwg_no
+        varOEMiPART_NO = SSDATA!smp_part_no
+        varOEMiRev_NO = SSDATA!smp_rev_no
+    End If
+    SSDATA.Close
+ 
+    If InStr(I_DESC_NM, vbCrLf) > 0 Then
+        sText1 = Trim(Left(I_DESC_NM, InStr(I_DESC_NM, vbCrLf) - 1))
+        sText2 = Trim(Right(I_DESC_NM, Len(I_DESC_NM) - Len(sText1) - 2))
+        
+        If InStr(sText2, "BAKE") > 0 Then
+            sText2 = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+        Else
+            sText2 = sText2 & " " & Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+        End If
+    Else
+        sText1 = I_DESC_NM
+        sText2 = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+    End If
+ 
+'============Angle
+    Const Angle0 = "1", Angle90 = "2", Angle180 = "3", Angle270 = "4"
+    
+'============Horizontal expansion rate
+    Const Hori1 = "1", Hori2 = "2", Hori3 = "3", Hori4 = "4"
+    Const Hori5 = "5", Hori6 = "6", Hori7 = "7", Hori8 = "8"
+    Const Hori9 = "9", Hori10 = "A", Hori11 = "B", Hori12 = "C"
+    Const Hori13 = "D", Hori14 = "E", Hori15 = "F", Hori16 = "G"
+    Const Hori17 = "H", Hori18 = "I", Hori19 = "J", Hori20 = "K"
+    Const Hori21 = "L", Hori22 = "M", Hori23 = "N", Hori24 = "O"
+
+'============Vertical expansion rate
+    Const Verti1 = "1", Verti2 = "2", Verti3 = "3", Verti4 = "4"
+    Const Verti5 = "5", Verti6 = "6", Verti7 = "7", Verti8 = "8"
+    Const Verti9 = "9", Verti10 = "A", Verti11 = "B", Verti12 = "C"
+    Const Verti13 = "D", Verti14 = "E", Verti15 = "F", Verti16 = "G"
+    Const Verti17 = "H", Verti18 = "I", Verti19 = "J", Verti20 = "K"
+    Const Verti21 = "L", Verti22 = "M", Verti23 = "N", Verti24 = "O"
+
+'============Font 9 일때 Size
+    Const Font0 = "000"
+    Const Font6 = "001", Font8 = "002", Font10 = "003", Font12 = "004"
+    Const Font14 = "005", Font18 = "006", Font24 = "007", Font30 = "008", Font36 = "009", Font48 = "010"
+
+    Const cFont6 = "101", cFont8 = "102", cFont10 = "103", cFont12 = "104"
+    Const cFont14 = "105", cFont18 = "106", cFont24 = "107", cFont30 = "108", cFont36 = "109", cFont48 = "110"
+
+'============Row Add
+    charRowAdd(5) = 10:    charRowAdd(6) = 18:    charRowAdd(8) = 20:    charRowAdd(10) = 23
+    charRowAdd(12) = 25:   charRowAdd(14) = 28:   charRowAdd(18) = 30:   charRowAdd(24) = 35
+    charRowAdd(30) = 43:   charRowAdd(36) = 48:   charRowAdd(48) = 78:
+    
+    Dim varRate     As String
+    varRate = "52"
+
+    sFormatTx = Chr(2) + "m" + vbCr
+    sFormatTx = sFormatTx + Chr(2) + "L" + vbCr
+    sFormatTx = sFormatTx + "D11" + vbCr
+    
+    ' 외부 Box 그리기           -- reserved --   -Row-    -Col-   -box- -수평길이+수직길이- -- line 폭 --
+    sFormatTx = sFormatTx + "1X11" + "000" + "0000" + "0030" + "b" + "0980" + "0950" + "0004" + "0004" + vbCr
+
+    
+    ' Barcode 줄 긋기    -- reserved --   -Row-    -Col-   -line-  -길이 + 두께-
+    
+    '2D QR Code Request by FRC CPL Liam 2020-06-05
+    'If GLO_COMP_CD = "FU" Then
+        'sFormatTx = sFormatTx & "3W1D66000042002902HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)
+    'End If
+
+    '2D BARCODE(QR CODE)    'aW a=3은 180도회전  ffff 높을수록 아래 gggg 높을수록 왼쪽으로, b,c = Module Size
+    'sFormatTx = sFormatTx & "3W1D33000030502302HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)  'FRC '2D QR Code Request by FRC CPL Liam 2020-06-05
+    'sFormatTx = sFormatTx & "3W1D55000063002202HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)
+
+
+
+    ' 가로줄 'Vertial Line
+    sFormatTx = sFormatTx + "1X11" + "000" + "0100" + "0030" + "l" + "0980" + "0004" + vbCr '1
+    
+    sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0030" + "l" + "0980" + "0004" + vbCr '2
+    If GLO_COMP_CD = "FU" Then
+        sFormatTx = sFormatTx + "1X11" + "000" + "0310" + "0030" + "l" + "0980" + "0004" + vbCr '3
+    Else
+        sFormatTx = sFormatTx + "1X11" + "000" + "0310" + "0030" + "l" + "0980" + "0004" + vbCr
+    End If
+    sFormatTx = sFormatTx + "1X11" + "000" + "0430" + "0030" + "l" + "0980" + "0004" + vbCr '4----(-40)430-390
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0550" + "0030" + "l" + "0980" + "0004" + vbCr    test
+    sFormatTx = sFormatTx + "1X11" + "000" + "0500" + "0030" + "l" + "0980" + "0004" + vbCr '5--550-510
+    
+    
+'20220720 Originel code  jj
+    sFormatTx = sFormatTx + "1X11" + "000" + "0670" + "0030" + "l" + "0980" + "0004" + vbCr '6----
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0740" + "0030" + "l" + "0980" + "0004" + vbCr
+    sFormatTx = sFormatTx + "1X11" + "000" + "0810" + "0030" + "l" + "0980" + "0004" + vbCr '7------
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0880" + "0030" + "l" + "0980" + "0004" + vbCr
+    
+ 
+    
+    
+    '세로줄
+
+    'If GLO_COMP_CD = "FU" Then
+        'If Trim(Right(C_CUSTOM_CD, 10)) = "21311" Then
+            'sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0330" + "l" + "0004" + "0365" + vbCr
+        'Else
+            'sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0330" + "l" + "0004" + "0240" + vbCr
+        'End If
+    'End If
+    'Vertial Line #2
+    sFormatTx = sFormatTx + "1X11" + "000" + "0430" + "0330" + "l" + "0004" + "0120" + vbCr
+
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0430" + "0245" + "l" + "0004" + "0380" + vbCr
+    'Vertial Line #1                          strat    v-position              Height
+    sFormatTx = sFormatTx + "1X11" + "000" + "0000" + "0760" + "l" + "0004" + "0950" + vbCr
+        
+   'Title
+    sFormatTx = sFormatTx + Angle180 + "911" + "005" + "0080" + "0980"
+    sFormatTx = sFormatTx + "Supplier" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "005" + "0080" + "0570"
+    sFormatTx = sFormatTx + "PEAK" + vbCr
+        
+   'CUSTOMER
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0170" + "0980"
+    sFormatTx = sFormatTx + "CUSTOMER" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0170" + "0740"
+    If Trim(Right(C_CUSTOM_CD, 10)) = "22206" Then
+        sFormatTx = sFormatTx + "MICRON Memory Malasia Sdn Bhd" + vbCr
+    Else
+        sFormatTx = sFormatTx + "MICRON SEMICONDUCTOR ASIA" + vbCr
+    End If
+        
+    'PEAK P/N
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0260" + "0980"
+    sFormatTx = sFormatTx + "PEAK P/N:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0265" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & varOEMiPART_NO + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0305" + "0740"
+    sFormatTx = sFormatTx & varOEMiPART_NO & vbCr
+             
+    'CUST'R P/N
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0380" + "0980"
+    sFormatTx = sFormatTx + "CUST'R P/N:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0385" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & C_ITEM_NO + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0420" + "0740"
+    sFormatTx = sFormatTx + C_ITEM_NO + vbCr
+    
+    'CUST'R PO
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0500" + "0980"
+    sFormatTx = sFormatTx + "PO NO#" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0505" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & C_PO_NO + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0545" + "0740"
+    sFormatTx = sFormatTx & C_PO_NO & vbCr
+    
+    'QTY
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0500" + "0320"
+    sFormatTx = sFormatTx + "QTY:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0505" + "0200"  'Code 128
+    sFormatTx = sFormatTx & "B" & varUnitQty + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0545" + "0200"
+    sFormatTx = sFormatTx + varUnitQty + vbCr
+    
+    'PEAK DWG
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0620" + "0980"
+    sFormatTx = sFormatTx + "PEAK DWG#" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0625" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & I_DESC_NM + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0670" + "0740"
+    sFormatTx = sFormatTx & I_DESC_NM & vbCr
+
+    'LOT NO (P+YMMDDXX) : XX = 출하횟수 -> 20170918 실제 LOT 표시 ihson
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0750" + "0980"
+    sFormatTx = sFormatTx + "LOT NO:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0755" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & Replace(varLotNo, "-", "") & vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0800" + "0740"
+    sFormatTx = sFormatTx + Replace(varLotNo, "-", "") + vbCr
+    
+    'C/NO
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0885" + "0980"
+    sFormatTx = sFormatTx + "C/NO:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0885" + "0860"
+    sFormatTx = sFormatTx & varCartonNo & vbCr
+    
+    'COO
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0885" + "0740"
+    sFormatTx = sFormatTx + "COO: " + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0885" + "0600"
+    sFormatTx = sFormatTx & "MADE IN TAIWAN" + vbCr
+    
+    sFormatTx = sFormatTx + "E" + vbCr
+
+End Sub
+Private Sub T4_Micron_SGP_BoxLabel_NEW_Print(varCartonNo As Integer, varTotalCartonNo As Integer)
+    '======================================================================
+    ' 2021. 06. 11
+    ' Customer : Micron SINGAPORE
+    ' Author : FRC IT Jim Chen
+    '======================================================================
+    Dim sql                     As String
+    Dim sText1                  As String
+    Dim sText2                  As String
+    Dim sText3                  As String
+    Dim varLotNo               As String
+    Dim varMoldSeq              As String
+    Dim varUnitQty              As String
+    Dim varQApass               As String
+    Dim subSpace                As String
+    Dim varMFGDT                As String
+    Dim varEXPDT                As String
+    Dim varDWG_no               As String
+    Dim varOEMiPART_NO          As String
+    Dim varOEMiRev_NO           As String
+    Dim strLOT_ID               As String
+    
+    Dim yyyy                    As String
+    Dim MM                      As String
+    Dim dd                      As String
+    
+    Dim charRowAdd(5 To 48)     As Integer
+    
+    varLotNo = C_LOT_NO
+    varMoldSeq = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2)
+    
+    varMFGDT = Format(GF_CHECK_LotDate("TR", varLotNo), "@@@@-@@-@@") 'Lot 생성일자를 가져옴
+    
+    varEXPDT = GF_GET_EXPDATE(GLO_COMP_CD, GLO_BSNS_CD, varMFGDT, Trim(Right(C_CUSTOM_CD, 5)), Trim( I_PART_NO), Trim(I_REV_NO), IIf(C_ITEM_NO = "", " ", C_ITEM_NO), Trim(Right(D_PROD_KB, 10)), , , Format(SHIP_DATE, "yyyy-mm-dd"))
+    
+    varMFGDT = Replace(varMFGDT, "-", "")
+    varEXPDT = Format(varEXPDT, "yyyymmdd")
+     
+    'varEXPDT = DateAdd("m", 36, varMFGDT)
+    'varEXPDT = DateAdd("m", 36, 20210729)
+    
+    'varMFGDT = Left(varMFGDT, 6) & "01" '20170918 생산월 01로 고정 표시 ihson , CPL hilee 2020.11.24 실제 생산일자를 표시함 (모든 SPIL SITE 공통적용)
+    'Check last C/T Qty
+    If varCartonNo = varTotalCartonNo Then
+        varUnitQty = CStr(Val(I_TOTAL_QT) Mod Val(I_BOXUNIT_NB))
+        If varUnitQty = "0" Then varUnitQty = I_BOXUNIT_NB
+    Else
+        varUnitQty = I_BOXUNIT_NB
+    End If
+        
+    If Val(I_START_CT_NO) = Val(I_END_CT_NO) Then
+        If Val(Result_QT) > 0 Then I_BOXUNIT_NB = Result_QT
+    End If
+    
+      ' 해당월의 출하 횟수를 확인
+    ' Display Shipping Date for the C_LOT_NO for Delivery Order for the Lot No
+    
+    sql$ = "select ipart_no , prev_no,   'P' || '" & Right(Format(SHIP_DATE, "yyyymmdd"), 5) & "' || trim(to_char(ROWNUM, '00')) as LOT_ID"
+    sql$ = sql$ & " from ( select distinct ipart_no, prev_no from MKT_OUT_11 a where a.comp_cd = 'SG' and a.bsns_cd = '11' and a.outorder_no ='" & Trim(C_LOT_ID) & "'"
+    sql$ = sql$ & ")"
+        
+    Set SSDATA = Nothing
+    SSDATA.Open sql$, DB_User
+            
+    strLOT_ID = ""
+    If SSDATA.RecordCount > 0 Then
+        Do Until SSDATA.EOF
+            If Trim(SSDATA!ipart_no) = Trim( I_PART_NO) And Trim(SSDATA!prev_no) = Trim(I_REV_NO) Then strLOT_ID = Trim(SSDATA!LOT_ID)
+            SSDATA.MoveNext
+        Loop
+    End If
+    SSDATA.Close
+    If Trim(strLOT_ID) = "" Then strLOT_ID = "P" & Right(Format(SHIP_DATE, "yyyymmdd"), 5) & "01"
+
+    '===========================================================================
+    ' Drawing No 확인
+    '===========================================================================
+    sql$ = "select nvl(a.smp_part_no,' ') as smp_part_no,  nvl(a.smp_rev_no,' ') as smp_rev_no, " & vbCrLf
+    sql$ = sql$ & " nvl((select distinct dwg_no from PRD_MAST_1_VIEW f  where f.comp_cd = a.comp_cd and f.bsns_cd = a.bsns_cd and a.prev_no=f.prev_no and a.iPART_NO=f.iPART_NO ),' ') as dwg_no from MKT_CUST_2 a" & vbCrLf
+    sql$ = sql$ & " where a.custom_cd ='" & Trim(Right(C_CUSTOM_CD, 10)) & "'" & vbCrLf
+    sql$ = sql$ & " and a.prev_no='" & I_REV_NO & "' and a.iPART_NO='" &  I_PART_NO & "'"
+    sql$ = sql$ & " and comp_cd = '" & GLO_COMP_CD & "' " & vbCrLf
+    sql$ = sql$ & " and bsns_cd = '" & GLO_BSNS_CD & "' " & vbCrLf
+        
+    Set SSDATA = Nothing
+    SSDATA.Open sql$, DB_User
+    
+    varOEMiPART_NO = ""
+    varOEMiRev_NO = ""
+    varDWG_no = ""
+    If SSDATA.RecordCount > 0 Then
+        varDWG_no = SSDATA!dwg_no
+        varOEMiPART_NO = SSDATA!smp_part_no
+        varOEMiRev_NO = SSDATA!smp_rev_no
+    End If
+    SSDATA.Close
+ 
+    If InStr(I_DESC_NM, vbCrLf) > 0 Then
+        sText1 = Trim(Left(I_DESC_NM, InStr(I_DESC_NM, vbCrLf) - 1))
+        sText2 = Trim(Right(I_DESC_NM, Len(I_DESC_NM) - Len(sText1) - 2))
+        
+        If InStr(sText2, "BAKE") > 0 Then
+            sText2 = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+        Else
+            sText2 = sText2 & " " & Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+        End If
+    Else
+        sText1 = I_DESC_NM
+        sText2 = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+    End If
+ 
+'============Angle
+    Const Angle0 = "1", Angle90 = "2", Angle180 = "3", Angle270 = "4"
+    
+'============Horizontal expansion rate
+    Const Hori1 = "1", Hori2 = "2", Hori3 = "3", Hori4 = "4"
+    Const Hori5 = "5", Hori6 = "6", Hori7 = "7", Hori8 = "8"
+    Const Hori9 = "9", Hori10 = "A", Hori11 = "B", Hori12 = "C"
+    Const Hori13 = "D", Hori14 = "E", Hori15 = "F", Hori16 = "G"
+    Const Hori17 = "H", Hori18 = "I", Hori19 = "J", Hori20 = "K"
+    Const Hori21 = "L", Hori22 = "M", Hori23 = "N", Hori24 = "O"
+
+'============Vertical expansion rate
+    Const Verti1 = "1", Verti2 = "2", Verti3 = "3", Verti4 = "4"
+    Const Verti5 = "5", Verti6 = "6", Verti7 = "7", Verti8 = "8"
+    Const Verti9 = "9", Verti10 = "A", Verti11 = "B", Verti12 = "C"
+    Const Verti13 = "D", Verti14 = "E", Verti15 = "F", Verti16 = "G"
+    Const Verti17 = "H", Verti18 = "I", Verti19 = "J", Verti20 = "K"
+    Const Verti21 = "L", Verti22 = "M", Verti23 = "N", Verti24 = "O"
+
+'============Font 9 일때 Size
+    Const Font0 = "000"
+    Const Font6 = "001", Font8 = "002", Font10 = "003", Font12 = "004"
+    Const Font14 = "005", Font18 = "006", Font24 = "007", Font30 = "008", Font36 = "009", Font48 = "010"
+
+    Const cFont6 = "101", cFont8 = "102", cFont10 = "103", cFont12 = "104"
+    Const cFont14 = "105", cFont18 = "106", cFont24 = "107", cFont30 = "108", cFont36 = "109", cFont48 = "110"
+
+'============Row Add
+    charRowAdd(5) = 10:    charRowAdd(6) = 18:    charRowAdd(8) = 20:    charRowAdd(10) = 23
+    charRowAdd(12) = 25:   charRowAdd(14) = 28:   charRowAdd(18) = 30:   charRowAdd(24) = 35
+    charRowAdd(30) = 43:   charRowAdd(36) = 48:   charRowAdd(48) = 78:
+    
+    Dim varRate     As String
+    varRate = "42"
+
+    sFormatTx = Chr(2) + "m" + vbCr
+    sFormatTx = sFormatTx + Chr(2) + "L" + vbCr
+    sFormatTx = sFormatTx + "D11" + vbCr
+    
+    ' 외부 Box 그리기           -- reserved --   -Row-    -Col-   -box- -수평길이+수직길이- -- line 폭 --
+    sFormatTx = sFormatTx + "1X11" + "000" + "0000" + "0030" + "b" + "0980" + "0950" + "0004" + "0004" + vbCr
+
+    
+    ' Barcode 줄 긋기    -- reserved --   -Row-    -Col-   -line-  -길이 + 두께-
+    
+    '2D DataMatrix Request by FRC CPL Liam 2021-09-07
+    If GLO_COMP_CD = "FU" Then
+        'sFormatTx = sFormatTx & "3W1D33000080003002HM," & "P" & C_ITEM_NO & "|1P" & varOEMiPART_NO & "|21P" & "FRC" & "|1T" & Replace(varLotNo, "-", "") & "|2D" & varEXPDT & "|S" & varCartonNo & "|7Q" & varUnitQty & "4LTW" & Chr$(13)
+        sFormatTx = sFormatTx & "3W1c55" + "000" + "0600" + "0280" + "200" + "0" + "000" + "000" & "P" & C_ITEM_NO & "|1P" & varOEMiPART_NO & "|21P" & "FRC" & "|1T" & Replace(varLotNo, "-", "") & "|2D" & varEXPDT & "|S" & varCartonNo & "|7Q" & varUnitQty & "|4LTW" & Chr$(13)
+    End If
+
+    '2D BARCODE(QR CODE)    'aW a=3은 180도회전  ffff 높을수록 아래 gggg 높을수록 왼쪽으로, b,c = Module Size
+    'sFormatTx = sFormatTx & "3W1D33000030502302HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)  'FRC '2D QR Code Request by FRC CPL Liam 2020-06-05
+    'sFormatTx = sFormatTx & "3W1D55000063002202HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)
+
+    ' 가로줄 'Vertial Line
+    sFormatTx = sFormatTx + "1X11" + "000" + "0100" + "0030" + "l" + "0980" + "0004" + vbCr
+    
+    sFormatTx = sFormatTx + "1X11" + "000" + "0200" + "0030" + "l" + "0980" + "0004" + vbCr
+    If GLO_COMP_CD = "FU" Then
+        sFormatTx = sFormatTx + "1X11" + "000" + "0300" + "0030" + "l" + "0980" + "0004" + vbCr
+    Else
+        sFormatTx = sFormatTx + "1X11" + "000" + "0310" + "0030" + "l" + "0980" + "0004" + vbCr
+    End If
+    sFormatTx = sFormatTx + "1X11" + "000" + "0400" + "0030" + "l" + "0980" + "0004" + vbCr
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0550" + "0030" + "l" + "0980" + "0004" + vbCr    test
+    sFormatTx = sFormatTx + "1X11" + "000" + "0500" + "0330" + "l" + "0980" + "0004" + vbCr
+    sFormatTx = sFormatTx + "1X11" + "000" + "0600" + "0030" + "l" + "0980" + "0004" + vbCr
+    sFormatTx = sFormatTx + "1X11" + "000" + "0700" + "0030" + "l" + "0980" + "0004" + vbCr
+    sFormatTx = sFormatTx + "1X11" + "000" + "0810" + "0030" + "l" + "0980" + "0004" + vbCr
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0880" + "0030" + "l" + "0980" + "0004" + vbCr
+    
+    '세로줄
+
+    'If GLO_COMP_CD = "FU" Then
+        'If Trim(Right(C_CUSTOM_CD, 10)) = "21311" Then
+            'sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0330" + "l" + "0004" + "0365" + vbCr
+        'Else
+            'sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0330" + "l" + "0004" + "0240" + vbCr
+        'End If
+    'End If
+    'Vertial Line #2
+    sFormatTx = sFormatTx + "1X11" + "000" + "0400" + "0330" + "l" + "0004" + "0210" + vbCr
+
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0430" + "0245" + "l" + "0004" + "0380" + vbCr
+    'Vertial Line #1                          strat    v-position              Height
+    sFormatTx = sFormatTx + "1X11" + "000" + "0000" + "0760" + "l" + "0004" + "0950" + vbCr
+        
+   'Title & CUSTOMER
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0080" + "0980"
+    sFormatTx = sFormatTx + "PEAK" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0080" + "0740"
+    sFormatTx = sFormatTx + "MICRON SEMICONDUCTOR ASIA" + vbCr
+
+    'CUSTOMER PO#
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0170" + "0980"
+    sFormatTx = sFormatTx + "PO NO#" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0145" + "0740"
+    sFormatTx = sFormatTx & "K" & C_PO_NO & vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "050" + "0190" + "0740"  'Code 128
+    sText3 = "K" & C_PO_NO
+    sFormatTx = sFormatTx & "B" & sText3 + vbCr
+        
+   'PKG Slip
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0270" + "0980"
+    sFormatTx = sFormatTx + "PKG Slip" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0245" + "0740"
+    sFormatTx = sFormatTx + "11K" & Replace(varLotNo, "-", "") & "-" & Format(SHIP_DATE, "yyyymmdd") & vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "050" + "0290" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & "11K" & Replace(varLotNo, "-", "") & "-" & Format(SHIP_DATE, "yyyymmdd") + vbCr
+    
+    'Manufature
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0370" + "0980"
+    sFormatTx = sFormatTx + "Manufature:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0345" + "0740"
+    sFormatTx = sFormatTx + "21P" & "FRC" & vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "050" + "0390" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & "21P" & "FRC" & vbCr
+    
+    'Origin
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0470" + "0980"
+    sFormatTx = sFormatTx + "Origin:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0445" + "0740"
+    sFormatTx = sFormatTx + "4L" & "TW" & vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "050" + "0490" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & "4L" & "TW" & vbCr
+    
+    'P/N
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0570" + "0980"
+    sFormatTx = sFormatTx + "P/N:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0545" + "0740"
+    sFormatTx = sFormatTx + "P" & C_ITEM_NO & vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "050" + "0590" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & "P" & C_ITEM_NO & vbCr
+    
+    'LOT NO#
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0670" + "0980"
+    sFormatTx = sFormatTx + "LOT NO#:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0645" + "0740"
+    sFormatTx = sFormatTx + "Z" & Replace(varLotNo, "-", "") & "+" & varEXPDT & vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "050" + "0690" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & "Z" & Replace(varLotNo, "-", "") & "+" & varEXPDT + vbCr
+    
+    'OTY
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0770" + "0980"
+    sFormatTx = sFormatTx + "OTY:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0745" + "0740"
+    sFormatTx = sFormatTx + "7Q" & varUnitQty & vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "050" + "0790" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & "7Q" & varUnitQty & vbCr
+    
+    
+    'S/N
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0870" + "0980"
+    sFormatTx = sFormatTx + "S/N#" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0850" + "0740"
+    sFormatTx = sFormatTx + "S" & Replace(varLotNo, "-", "") & "-" & varCartonNo & vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "050" + "0895" + "0740"  'Code 128
+    sText3 = "S" & Replace(varLotNo, "-", "") & "-" & varCartonNo
+    sFormatTx = sFormatTx & "B" & sText3 + vbCr
+    
+    'PEAK P/N
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0940" + "0980"
+    sFormatTx = sFormatTx + "PEAK P/N:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0940" + "0740"
+    sFormatTx = sFormatTx + varOEMiPART_NO + vbCr
+    
+    
+    'OLD--------
+    'PEAK P/N
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0260" + "0980"
+    'sFormatTx = sFormatTx + "PEAK P/N:" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0265" + "0740"  'Code 128
+    'sFormatTx = sFormatTx & "B" & varOEMiPART_NO + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0305" + "0740"
+    'sFormatTx = sFormatTx & varOEMiPART_NO & vbCr
+             
+    'CUST'R P/N
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0380" + "0980"
+    'sFormatTx = sFormatTx + "CUST'R P/N:" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0385" + "0740"  'Code 128
+    'sFormatTx = sFormatTx & "B" & C_ITEM_NO + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0420" + "0740"
+    'sFormatTx = sFormatTx + C_ITEM_NO + vbCr
+    
+    'CUST'R PO
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0500" + "0980"
+    'sFormatTx = sFormatTx + "PO NO#" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0505" + "0740"  'Code 128
+    'sFormatTx = sFormatTx & "B" & C_PO_NO + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0545" + "0740"
+    'sFormatTx = sFormatTx & C_PO_NO & vbCr
+    
+    'QTY
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0500" + "0320"
+    'sFormatTx = sFormatTx + "QTY:" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0505" + "0200"  'Code 128
+    'sFormatTx = sFormatTx & "B" & varUnitQty + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0545" + "0200"
+    'sFormatTx = sFormatTx + varUnitQty + vbCr
+    
+    'PEAK DWG
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0620" + "0980"
+    'sFormatTx = sFormatTx + "PEAK DWG#" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0625" + "0740"  'Code 128
+    'sFormatTx = sFormatTx & "B" & I_DESC_NM + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0670" + "0740"
+    'sFormatTx = sFormatTx & I_DESC_NM & vbCr
+
+    'LOT NO (P+YMMDDXX) : XX = 출하횟수 -> 20170918 실제 LOT 표시 ihson
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0750" + "0980"
+    'sFormatTx = sFormatTx + "LOT NO:" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0755" + "0740"  'Code 128
+    'sFormatTx = sFormatTx & "B" & Replace(varLotNo, "-", "") & vbCr
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0800" + "0740"
+    'sFormatTx = sFormatTx + Replace(varLotNo, "-", "") + vbCr
+    
+    'C/NO
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0885" + "0980"
+    'sFormatTx = sFormatTx + "C/NO:" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0885" + "0860"
+    'sFormatTx = sFormatTx & varCartonNo & vbCr
+    
+    'COO
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0885" + "0740"
+    'sFormatTx = sFormatTx + "COO: " + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0885" + "0600"
+    'sFormatTx = sFormatTx & "MADE IN TAIWAN" + vbCr
+    
+    sFormatTx = sFormatTx + "E" + vbCr
+
+End Sub
+Private Sub T4_Walton_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As Integer)
+    '======================================================================
+    ' 2021. 06. 18
+    '
+    '
+    ' Auhtor : FRC Jim Chen
+    '======================================================================
+    Dim sql                     As String
+    Dim sText1                  As String
+    Dim sText2                  As String
+    Dim varLotNo               As String
+    Dim varUnitQty              As String
+    Dim varQApass               As String
+    Dim subSpace                As String
+    Dim varOEMiPART_NO          As String
+    Dim varOEMiRev_NO           As String
+    Dim charRowAdd(5 To 48)     As Integer
+    Dim varDWG_no               As String
+    Dim varCUSTDWG_no           As String
+    Dim varPrdITEM_no           As String
+    Dim varMFGDT                As String
+    
+    varLotNo = C_LOT_NO
+
+    'MFG Date
+    varMFGDT = Format(GF_CHECK_LotDate(Trim(D_PROD_KB), varLotNo), "@@@@-@@-@@") 'Lot 생성일자를 가져옴
+    
+    
+    'varEXPDT = Replace(DateAdd("yyyy", 5, varMFGDT), "-", "")
+    varMFGDT = Replace(varMFGDT, "-", "")
+  
+    
+
+    'Check last C/T Qty
+    If varCartonNo = varTotalCartonNo Then
+        varUnitQty = CStr(Val(I_TOTAL_QT) Mod Val(I_BOXUNIT_NB))
+        If varUnitQty = "0" Then varUnitQty = I_BOXUNIT_NB
+    Else
+        varUnitQty = I_BOXUNIT_NB
+    End If
+    
+    If Val(I_START_CT_NO) = Val(I_END_CT_NO) Then
+        If Val(Result_QT) > 0 Then I_BOXUNIT_NB = Result_QT
+    End If
+    '===========================================================================
+    ' SMP 정보 확인, Drawing No 확인
+    '===========================================================================
+    sql$ = "select nvl(a.smp_part_no,' ') as smp_part_no, nvl(a.smp_rev_no,' ') as smp_rev_no, nvl(a.cust_dwg_no,' ') as cust_dwg_no," & vbCrLf
+    sql$ = sql$ & " (select distinct nvl(item_no, ' ') item_no from PRD_MAST_1_VIEW f  where f.comp_cd = a.comp_cd and f.bsns_cd = a.bsns_cd and a.prev_no=f.prev_no and a.iPART_NO=f.iPART_NO) as prd_item_no, " & vbCrLf
+    sql$ = sql$ & " (select distinct nvl(dwg_no, ' ') dwg_no from PRD_MAST_1_VIEW f  where f.comp_cd = a.comp_cd and f.bsns_cd = a.bsns_cd and a.prev_no=f.prev_no and a.iPART_NO=f.iPART_NO) as dwg_no" & vbCrLf
+    sql$ = sql$ & " from MKT_CUST_2 a" & vbCrLf
+    sql$ = sql$ & " where a.custom_cd ='" & Trim(Right(C_CUSTOM_CD, 10)) & "'" & vbCrLf
+    sql$ = sql$ & " and a.prev_no='" & I_REV_NO & "' and a.iPART_NO='" &  I_PART_NO & "'"
+    sql$ = sql$ & " and comp_cd = '" & GLO_COMP_CD & "' " & vbCrLf
+    sql$ = sql$ & " and bsns_cd = '" & GLO_BSNS_CD & "' " & vbCrLf
+        
+    Set SSDATA = Nothing
+    SSDATA.Open sql$, DB_User
+    
+    varOEMiPART_NO = ""
+    varOEMiRev_NO = ""
+    varDWG_no = ""
+    varCUSTDWG_no = ""
+    varPrdITEM_no = ""
+    If SSDATA.RecordCount > 0 Then
+        varOEMiPART_NO = SSDATA!smp_part_no
+        varOEMiRev_NO = SSDATA!smp_rev_no
+        varDWG_no = SSDATA!dwg_no
+        varPrdITEM_no = SSDATA!prd_item_no
+        varCUSTDWG_no = SSDATA!cust_dwg_no
+    End If
+    SSDATA.Close
+
+    If InStr(I_DESC_NM, vbCrLf) > 0 Then
+        sText1 = Trim(Left(I_DESC_NM, InStr(I_DESC_NM, vbCrLf) - 1))
+        sText2 = Trim(Right(I_DESC_NM, Len(I_DESC_NM) - Len(sText1) - 2))
+        
+        If InStr(sText2, "BAKE") > 0 Then
+            sText2 = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+        Else
+            sText2 = sText2 & " " & Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+        End If
+    Else
+        sText1 = I_DESC_NM
+        sText2 = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+    End If
+    
+'============Angle
+    Const Angle0 = "1", Angle90 = "2", Angle180 = "3", Angle270 = "4"
+    
+'============Horizontal expansion rate
+    Const Hori1 = "1", Hori2 = "2", Hori3 = "3", Hori4 = "4"
+    Const Hori5 = "5", Hori6 = "6", Hori7 = "7", Hori8 = "8"
+    Const Hori9 = "9", Hori10 = "A", Hori11 = "B", Hori12 = "C"
+    Const Hori13 = "D", Hori14 = "E", Hori15 = "F", Hori16 = "G"
+    Const Hori17 = "H", Hori18 = "I", Hori19 = "J", Hori20 = "K"
+    Const Hori21 = "L", Hori22 = "M", Hori23 = "N", Hori24 = "O"
+
+'============Vertical expansion rate
+    Const Verti1 = "1", Verti2 = "2", Verti3 = "3", Verti4 = "4"
+    Const Verti5 = "5", Verti6 = "6", Verti7 = "7", Verti8 = "8"
+    Const Verti9 = "9", Verti10 = "A", Verti11 = "B", Verti12 = "C"
+    Const Verti13 = "D", Verti14 = "E", Verti15 = "F", Verti16 = "G"
+    Const Verti17 = "H", Verti18 = "I", Verti19 = "J", Verti20 = "K"
+    Const Verti21 = "L", Verti22 = "M", Verti23 = "N", Verti24 = "O"
+
+'============Font 9 일때 Size
+    Const Font0 = "000"
+    Const Font6 = "001", Font8 = "002", Font10 = "003", Font12 = "004"
+    Const Font14 = "005", Font18 = "006", Font24 = "007", Font30 = "008", Font36 = "009", Font48 = "010"
+
+    Const cFont6 = "101", cFont8 = "102", cFont10 = "103", cFont12 = "104"
+    Const cFont14 = "105", cFont18 = "106", cFont24 = "107", cFont30 = "108", cFont36 = "109", cFont48 = "110"
+
+'============Row Add
+    charRowAdd(5) = 10:    charRowAdd(6) = 18:    charRowAdd(8) = 20:    charRowAdd(10) = 23
+    charRowAdd(12) = 25:   charRowAdd(14) = 28:   charRowAdd(18) = 30:   charRowAdd(24) = 35
+    charRowAdd(30) = 43:   charRowAdd(36) = 48:   charRowAdd(48) = 78:
+
+    sFormatTx = Chr(2) + "m" + vbCr
+    sFormatTx = sFormatTx + Chr(2) + "L" + vbCr
+    sFormatTx = sFormatTx + "D11" + vbCr
+    
+    ' Barcode 줄 긋기    -- reserved --   -Row-    -Col-   -line-  -길이 + 두께-
+    sFormatTx = sFormatTx + "1X11" + "000" + "0100" + "0030" + "l" + "0980" + "0007" + vbCr
+    sFormatTx = sFormatTx + "1X11" + "000" + "0850" + "0030" + "l" + "0980" + "0007" + vbCr
+    
+    ' Barcode 표시              -출력각- -type-  --두께--   -높이-   -row-    -col-          * 두께 : 굵은 두께 + 얇은 두께
+    
+    
+    
+    '2D BARCODE(QR CODE)    'aW a=3은 180도회전  ffff 높을수록 아래 gggg 높을수록 왼쪽으로, b,c = Module Size
+    sFormatTx = sFormatTx & "3W1D55000065002302HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varMFGDT & Chr$(13)  'FRC '2D QR Code Request by FRC CPL Liam 2020-06-05
+   
+    'Title
+    sFormatTx = sFormatTx + Angle180 + "911" + "006" + "0080" + "0850"
+    sFormatTx = sFormatTx + "PEAK SHIPPING LABEL" & vbCr
+        
+    'CUSTOMER
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0170" + "0980"
+    sFormatTx = sFormatTx + "CUSTOMER" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0170" + "0730"
+    sFormatTx = sFormatTx + ": " + Trim(Left(C_CUSTOM_CD, 30)) + vbCr
+    
+    'CUSTOMER P/N
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0270" + "0980"
+    sFormatTx = sFormatTx + "Part No" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0270" + "0730"
+    sFormatTx = sFormatTx + ": " + C_ITEM_NO + vbCr
+    
+    'Product DWG#
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0370" + "0980"
+    sFormatTx = sFormatTx + "Item" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0370" + "0730"
+    sFormatTx = sFormatTx + ": " + sText1 + vbCr
+    
+    'SHIPPG LOT NO
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0470" + "0980"
+    sFormatTx = sFormatTx + "LOT NO" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0470" + "0730"
+    sFormatTx = sFormatTx + ": " + C_LOT_NO + vbCr
+    
+    'MFG Date
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0570" + "0980"
+    sFormatTx = sFormatTx + "MFG Date" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0570" + "0730"
+    sFormatTx = sFormatTx + ": " + varMFGDT + vbCr
+        
+    'QTY
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0670" + "0980"
+    sFormatTx = sFormatTx + "Quantity" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0670" + "0730"
+    sFormatTx = sFormatTx + ": " + varUnitQty + vbCr
+      
+    'PEAK P/N
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0770" + "0980"
+    sFormatTx = sFormatTx + "PEAK P/N" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0770" + "0730"
+    sFormatTx = sFormatTx + ": " + varOEMiPART_NO + vbCr '  I_PART_NO + vbCr
+
+    'C/NO
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0920" + "0980"
+    sFormatTx = sFormatTx + "C/NO" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "004" + "0920" + "0730"
+    sFormatTx = sFormatTx + ": " & varCartonNo & vbCr
+    sFormatTx = sFormatTx + "E" + vbCr
+End Sub
+Private Sub T4_ASE_SGP_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As Integer)
+    '======================================================================
+    ' 2021. 06. 11
+    ' Customer : Micron SINGAPORE
+    ' Author : FRC IT Jim Chen
+    '======================================================================
+    Dim sql                     As String
+    Dim sText1                  As String
+    Dim sText2                  As String
+    Dim varLotNo               As String
+    Dim varMoldSeq              As String
+    Dim varUnitQty              As String
+    Dim varQApass               As String
+    Dim subSpace                As String
+    Dim varMFGDT                As String
+    Dim varEXPDT                As String
+    Dim varDWG_no               As String
+    Dim varOEMiPART_NO          As String
+    Dim varOEMiRev_NO           As String
+    Dim strLOT_ID               As String
+    
+    Dim yyyy                    As String
+    Dim MM                      As String
+    Dim dd                      As String
+    
+    Dim charRowAdd(5 To 48)     As Integer
+    
+    varLotNo = C_LOT_NO
+    varMoldSeq = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2)
+    
+    varMFGDT = Format(GF_CHECK_LotDate(Trim(D_PROD_KB), varLotNo), "@@@@@@@@") 'Lot 생성일자를 가져옴
+    'varMFGDT = Left(varMFGDT, 6) & "01" '20170918 생산월 01로 고정 표시 ihson , CPL hilee 2020.11.24 실제 생산일자를 표시함 (모든 SPIL SITE 공통적용)
+    'Check last C/T Qty
+    If varCartonNo = varTotalCartonNo Then
+        varUnitQty = CStr(Val(I_TOTAL_QT) Mod Val(I_BOXUNIT_NB))
+        If varUnitQty = "0" Then varUnitQty = I_BOXUNIT_NB
+    Else
+        varUnitQty = I_BOXUNIT_NB
+    End If
+        
+    If Val(I_START_CT_NO) = Val(I_END_CT_NO) Then
+        If Val(Result_QT) > 0 Then I_BOXUNIT_NB = Result_QT
+    End If
+    
+      ' 해당월의 출하 횟수를 확인
+    ' Display Shipping Date for the C_LOT_NO for Delivery Order for the Lot No
+    
+    sql$ = "select ipart_no , prev_no,   'P' || '" & Right(Format(SHIP_DATE, "yyyymmdd"), 5) & "' || trim(to_char(ROWNUM, '00')) as LOT_ID"
+    sql$ = sql$ & " from ( select distinct ipart_no, prev_no from MKT_OUT_11 a where a.comp_cd = 'SG' and a.bsns_cd = '11' and a.outorder_no ='" & Trim(C_LOT_ID) & "'"
+    sql$ = sql$ & ")"
+        
+    Set SSDATA = Nothing
+    SSDATA.Open sql$, DB_User
+            
+    strLOT_ID = ""
+    If SSDATA.RecordCount > 0 Then
+        Do Until SSDATA.EOF
+            If Trim(SSDATA!ipart_no) = Trim( I_PART_NO) And Trim(SSDATA!prev_no) = Trim(I_REV_NO) Then strLOT_ID = Trim(SSDATA!LOT_ID)
+            SSDATA.MoveNext
+        Loop
+    End If
+    SSDATA.Close
+    If Trim(strLOT_ID) = "" Then strLOT_ID = "P" & Right(Format(SHIP_DATE, "yyyymmdd"), 5) & "01"
+
+    '===========================================================================
+    ' Drawing No 확인
+    '===========================================================================
+    sql$ = "select nvl(a.smp_part_no,' ') as smp_part_no,  nvl(a.smp_rev_no,' ') as smp_rev_no, " & vbCrLf
+    sql$ = sql$ & " nvl((select distinct dwg_no from PRD_MAST_1_VIEW f  where f.comp_cd = a.comp_cd and f.bsns_cd = a.bsns_cd and a.prev_no=f.prev_no and a.iPART_NO=f.iPART_NO ),' ') as dwg_no from MKT_CUST_2 a" & vbCrLf
+    sql$ = sql$ & " where a.custom_cd ='" & Trim(Right(C_CUSTOM_CD, 10)) & "'" & vbCrLf
+    sql$ = sql$ & " and a.prev_no='" & I_REV_NO & "' and a.iPART_NO='" &  I_PART_NO & "'"
+    sql$ = sql$ & " and comp_cd = '" & GLO_COMP_CD & "' " & vbCrLf
+    sql$ = sql$ & " and bsns_cd = '" & GLO_BSNS_CD & "' " & vbCrLf
+        
+    Set SSDATA = Nothing
+    SSDATA.Open sql$, DB_User
+    
+    varOEMiPART_NO = ""
+    varOEMiRev_NO = ""
+    varDWG_no = ""
+    If SSDATA.RecordCount > 0 Then
+        varDWG_no = SSDATA!dwg_no
+        varOEMiPART_NO = SSDATA!smp_part_no
+        varOEMiRev_NO = SSDATA!smp_rev_no
+    End If
+    SSDATA.Close
+ 
+    If InStr(I_DESC_NM, vbCrLf) > 0 Then
+        sText1 = Trim(Left(I_DESC_NM, InStr(I_DESC_NM, vbCrLf) - 1))
+        sText2 = Trim(Right(I_DESC_NM, Len(I_DESC_NM) - Len(sText1) - 2))
+        
+        If InStr(sText2, "BAKE") > 0 Then
+            sText2 = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+        Else
+            sText2 = sText2 & " " & Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+        End If
+    Else
+        sText1 = I_DESC_NM
+        sText2 = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+    End If
+ 
+'============Angle
+    Const Angle0 = "1", Angle90 = "2", Angle180 = "3", Angle270 = "4"
+    
+'============Horizontal expansion rate
+    Const Hori1 = "1", Hori2 = "2", Hori3 = "3", Hori4 = "4"
+    Const Hori5 = "5", Hori6 = "6", Hori7 = "7", Hori8 = "8"
+    Const Hori9 = "9", Hori10 = "A", Hori11 = "B", Hori12 = "C"
+    Const Hori13 = "D", Hori14 = "E", Hori15 = "F", Hori16 = "G"
+    Const Hori17 = "H", Hori18 = "I", Hori19 = "J", Hori20 = "K"
+    Const Hori21 = "L", Hori22 = "M", Hori23 = "N", Hori24 = "O"
+
+'============Vertical expansion rate
+    Const Verti1 = "1", Verti2 = "2", Verti3 = "3", Verti4 = "4"
+    Const Verti5 = "5", Verti6 = "6", Verti7 = "7", Verti8 = "8"
+    Const Verti9 = "9", Verti10 = "A", Verti11 = "B", Verti12 = "C"
+    Const Verti13 = "D", Verti14 = "E", Verti15 = "F", Verti16 = "G"
+    Const Verti17 = "H", Verti18 = "I", Verti19 = "J", Verti20 = "K"
+    Const Verti21 = "L", Verti22 = "M", Verti23 = "N", Verti24 = "O"
+
+'============Font 9 일때 Size
+    Const Font0 = "000"
+    Const Font6 = "001", Font8 = "002", Font10 = "003", Font12 = "004"
+    Const Font14 = "005", Font18 = "006", Font24 = "007", Font30 = "008", Font36 = "009", Font48 = "010"
+
+    Const cFont6 = "101", cFont8 = "102", cFont10 = "103", cFont12 = "104"
+    Const cFont14 = "105", cFont18 = "106", cFont24 = "107", cFont30 = "108", cFont36 = "109", cFont48 = "110"
+
+'============Row Add
+    charRowAdd(5) = 10:    charRowAdd(6) = 18:    charRowAdd(8) = 20:    charRowAdd(10) = 23
+    charRowAdd(12) = 25:   charRowAdd(14) = 28:   charRowAdd(18) = 30:   charRowAdd(24) = 35
+    charRowAdd(30) = 43:   charRowAdd(36) = 48:   charRowAdd(48) = 78:
+    
+    Dim varRate     As String
+    varRate = "52"
+
+    sFormatTx = Chr(2) + "m" + vbCr
+    sFormatTx = sFormatTx + Chr(2) + "L" + vbCr
+    sFormatTx = sFormatTx + "D11" + vbCr
+    
+    ' 외부 Box 그리기           -- reserved --   -Row-    -Col-   -box- -수평길이+수직길이- -- line 폭 --
+    sFormatTx = sFormatTx + "1X11" + "000" + "0000" + "0030" + "b" + "0980" + "0950" + "0004" + "0004" + vbCr
+
+    
+    ' Barcode 줄 긋기    -- reserved --   -Row-    -Col-   -line-  -길이 + 두께-
+    
+    '2D QR Code Request by FRC CPL Liam 2020-06-05
+    'If GLO_COMP_CD = "FU" Then
+        'sFormatTx = sFormatTx & "3W1D66000042002902HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)
+    'End If
+
+    '2D BARCODE(QR CODE)    'aW a=3은 180도회전  ffff 높을수록 아래 gggg 높을수록 왼쪽으로, b,c = Module Size
+    'sFormatTx = sFormatTx & "3W1D33000030502302HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)  'FRC '2D QR Code Request by FRC CPL Liam 2020-06-05
+    'sFormatTx = sFormatTx & "3W1D55000063002202HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)
+
+    ' 가로줄 'Vertial Line
+    sFormatTx = sFormatTx + "1X11" + "000" + "0100" + "0030" + "l" + "0980" + "0004" + vbCr
+    
+    sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0030" + "l" + "0980" + "0004" + vbCr
+    If GLO_COMP_CD = "FU" Then
+        sFormatTx = sFormatTx + "1X11" + "000" + "0310" + "0030" + "l" + "0980" + "0004" + vbCr
+    Else
+        sFormatTx = sFormatTx + "1X11" + "000" + "0310" + "0030" + "l" + "0980" + "0004" + vbCr
+    End If
+    sFormatTx = sFormatTx + "1X11" + "000" + "0430" + "0030" + "l" + "0980" + "0004" + vbCr
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0550" + "0030" + "l" + "0980" + "0004" + vbCr    test
+    sFormatTx = sFormatTx + "1X11" + "000" + "0550" + "0030" + "l" + "0980" + "0004" + vbCr
+    sFormatTx = sFormatTx + "1X11" + "000" + "0670" + "0030" + "l" + "0980" + "0004" + vbCr
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0740" + "0030" + "l" + "0980" + "0004" + vbCr
+    sFormatTx = sFormatTx + "1X11" + "000" + "0810" + "0030" + "l" + "0980" + "0004" + vbCr
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0880" + "0030" + "l" + "0980" + "0004" + vbCr
+    
+    '세로줄
+
+    'If GLO_COMP_CD = "FU" Then
+        'If Trim(Right(C_CUSTOM_CD, 10)) = "21311" Then
+            'sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0330" + "l" + "0004" + "0365" + vbCr
+        'Else
+            'sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0330" + "l" + "0004" + "0240" + vbCr
+        'End If
+    'End If
+    'Vertial Line #2
+    sFormatTx = sFormatTx + "1X11" + "000" + "0430" + "0330" + "l" + "0004" + "0120" + vbCr
+
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0430" + "0245" + "l" + "0004" + "0380" + vbCr
+    'Vertial Line #1                          strat    v-position              Height
+    sFormatTx = sFormatTx + "1X11" + "000" + "0000" + "0760" + "l" + "0004" + "0950" + vbCr
+        
+   'Title
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0080" + "0980"
+    sFormatTx = sFormatTx + "SUPPLIER" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "005" + "0080" + "0740"
+    sFormatTx = sFormatTx + "PEAK" + vbCr
+   
+   'CUSTOMER
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0170" + "0980"
+    sFormatTx = sFormatTx + "CUSTOMER" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0170" + "0740"
+    sFormatTx = sFormatTx + "ASE SINGAPORE PTE. LTD." + vbCr
+        
+    'PEAK P/N
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0260" + "0980"
+    sFormatTx = sFormatTx + "PEAK P/N" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0265" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & varOEMiPART_NO + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0305" + "0740"
+    sFormatTx = sFormatTx & varOEMiPART_NO & vbCr
+             
+    'CUST'R P/N
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0380" + "0980"
+    sFormatTx = sFormatTx + "CUST'R P/N" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0385" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & C_ITEM_NO + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0420" + "0740"
+    sFormatTx = sFormatTx + C_ITEM_NO + vbCr
+    
+    'CUST'R PO
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0500" + "0980"
+    sFormatTx = sFormatTx + "PO NO#" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0505" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & C_PO_NO + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0545" + "0740"
+    sFormatTx = sFormatTx & C_PO_NO & vbCr
+    
+    'QTY
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0500" + "0320"
+    sFormatTx = sFormatTx + "QTY:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0505" + "0200"  'Code 128
+    sFormatTx = sFormatTx & "B" & varUnitQty + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0545" + "0200"
+    sFormatTx = sFormatTx + varUnitQty + vbCr
+    
+    'PEAK DWG
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0620" + "0980"
+    sFormatTx = sFormatTx + "PEAK DWG#" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0625" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & I_DESC_NM + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0670" + "0740"
+    sFormatTx = sFormatTx & I_DESC_NM & vbCr
+
+    'LOT NO (P+YMMDDXX) : XX = 출하횟수 -> 20170918 실제 LOT 표시 ihson
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0750" + "0980"
+    sFormatTx = sFormatTx + "LOT NO:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0755" + "0740"  'Code 128
+    sFormatTx = sFormatTx & "B" & Replace(varLotNo, "-", "") & vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0800" + "0740"
+    sFormatTx = sFormatTx + Replace(varLotNo, "-", "") + vbCr
+    
+    'C/NO
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0885" + "0980"
+    sFormatTx = sFormatTx + "C/NO:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0885" + "0860"
+    sFormatTx = sFormatTx & varCartonNo & vbCr
+    
+    'COO
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0885" + "0740"
+    sFormatTx = sFormatTx + "COO: " + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0885" + "0600"
+    sFormatTx = sFormatTx & "MADE IN TAIWAN" + vbCr
+    
+    sFormatTx = sFormatTx + "E" + vbCr
+
+End Sub
+Private Sub T4_SIGUARD_BoxLabel_Print(varCartonNo As Integer, varTotalCartonNo As Integer)
+    '======================================================================
+    ' 2022. 07. 18
+    ' Customer : SIGURD 20908?21547?21987
+    ' Author : FRC IT Jim Chen
+    '======================================================================
+    Dim sql                     As String
+    Dim sText1                  As String
+    Dim sText2                  As String
+    Dim varLotNo               As String
+    Dim varMoldSeq              As String
+    Dim varUnitQty              As String
+    Dim varQApass               As String
+    Dim subSpace                As String
+    Dim varMFGDT                As String
+    Dim varEXPDT                As String
+    Dim varDWG_no               As String
+    Dim varOEMiPART_NO          As String
+    Dim varOEMiRev_NO           As String
+    Dim strLOT_ID               As String
+    
+    Dim yyyy                    As String
+    Dim MM                      As String
+    Dim dd                      As String
+    
+    Dim charRowAdd(5 To 48)     As Integer
+    
+    varLotNo = C_LOT_NO
+    varMoldSeq = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2)
+    varMFGDT = Format(GF_CHECK_LotDate(Trim(D_PROD_KB), varLotNo), "@@@@/@@/@@") 'Lot 생성일자를 가져옴
+    
+    
+    'varMFGDT = Left(varMFGDT, 6) & "01" '20170918 생산월 01로 고정 표시 ihson , CPL hilee 2020.11.24 실제 생산일자를 표시함 (모든 SPIL SITE 공통적용)
+    varEXPDT = GF_GET_EXPDATE(GLO_COMP_CD, GLO_BSNS_CD, Trim(SHIP_DATE), Trim(Right(C_CUSTOM_CD, 5)), Trim( I_PART_NO), Trim(I_REV_NO), IIf(C_ITEM_NO = "", " ", C_ITEM_NO), Trim(Right(D_PROD_KB, 10)), , , Format(SHIP_DATE, "yyyy-mm-dd"))
+    varEXPDT = Replace(varEXPDT, "-", "/")  'JJ202207
+     
+    'Check last C/T Qty
+    If varCartonNo = varTotalCartonNo Then
+        varUnitQty = CStr(Val(I_TOTAL_QT) Mod Val(I_BOXUNIT_NB))
+        If varUnitQty = "0" Then varUnitQty = I_BOXUNIT_NB
+    Else
+        varUnitQty = I_BOXUNIT_NB
+    End If
+        
+    If Val(I_START_CT_NO) = Val(I_END_CT_NO) Then
+        If Val(Result_QT) > 0 Then I_BOXUNIT_NB = Result_QT
+    End If
+    
+      ' 해당월의 출하 횟수를 확인
+    ' Display Shipping Date for the C_LOT_NO for Delivery Order for the Lot No
+    
+    sql$ = "select ipart_no , prev_no,   'P' || '" & Right(Format(SHIP_DATE, "yyyymmdd"), 5) & "' || trim(to_char(ROWNUM, '00')) as LOT_ID"
+    sql$ = sql$ & " from ( select distinct ipart_no, prev_no from MKT_OUT_11 a where a.comp_cd = 'SG' and a.bsns_cd = '11' and a.outorder_no ='" & Trim(C_LOT_ID) & "'"
+    sql$ = sql$ & ")"
+        
+    Set SSDATA = Nothing
+    SSDATA.Open sql$, DB_User
+            
+    strLOT_ID = ""
+    If SSDATA.RecordCount > 0 Then
+        Do Until SSDATA.EOF
+            If Trim(SSDATA!ipart_no) = Trim( I_PART_NO) And Trim(SSDATA!prev_no) = Trim(I_REV_NO) Then strLOT_ID = Trim(SSDATA!LOT_ID)
+            SSDATA.MoveNext
+        Loop
+    End If
+    SSDATA.Close
+    If Trim(strLOT_ID) = "" Then strLOT_ID = "P" & Right(Format(SHIP_DATE, "yyyymmdd"), 5) & "01"
+
+    '===========================================================================
+    ' Drawing No 확인
+    '===========================================================================
+    sql$ = "select nvl(a.smp_part_no,' ') as smp_part_no,  nvl(a.smp_rev_no,' ') as smp_rev_no, " & vbCrLf
+    sql$ = sql$ & " nvl((select distinct dwg_no from PRD_MAST_1_VIEW f  where f.comp_cd = a.comp_cd and f.bsns_cd = a.bsns_cd and a.prev_no=f.prev_no and a.iPART_NO=f.iPART_NO ),' ') as dwg_no from MKT_CUST_2 a" & vbCrLf
+    sql$ = sql$ & " where a.custom_cd ='" & Trim(Right(C_CUSTOM_CD, 10)) & "'" & vbCrLf
+    sql$ = sql$ & " and a.prev_no='" & I_REV_NO & "' and a.iPART_NO='" &  I_PART_NO & "'"
+    sql$ = sql$ & " and comp_cd = '" & GLO_COMP_CD & "' " & vbCrLf
+    sql$ = sql$ & " and bsns_cd = '" & GLO_BSNS_CD & "' " & vbCrLf
+        
+    Set SSDATA = Nothing
+    SSDATA.Open sql$, DB_User
+    
+    varOEMiPART_NO = ""
+    varOEMiRev_NO = ""
+    varDWG_no = ""
+    If SSDATA.RecordCount > 0 Then
+        varDWG_no = SSDATA!dwg_no
+        varOEMiPART_NO = SSDATA!smp_part_no
+        varOEMiRev_NO = SSDATA!smp_rev_no
+    End If
+    SSDATA.Close
+ 
+    If InStr(I_DESC_NM, vbCrLf) > 0 Then
+        sText1 = Trim(Left(I_DESC_NM, InStr(I_DESC_NM, vbCrLf) - 1))
+        sText2 = Trim(Right(I_DESC_NM, Len(I_DESC_NM) - Len(sText1) - 2))
+        
+        If InStr(sText2, "BAKE") > 0 Then
+            sText2 = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+        Else
+            sText2 = sText2 & " " & Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+        End If
+    Else
+        sText1 = I_DESC_NM
+        sText2 = Mid(varMoldNo, InStr(varMoldNo, "-") + 1, 2) & varOEMiRev_NO
+    End If
+ 
+'============Angle
+    Const Angle0 = "1", Angle90 = "2", Angle180 = "3", Angle270 = "4"
+    
+'============Horizontal expansion rate
+    Const Hori1 = "1", Hori2 = "2", Hori3 = "3", Hori4 = "4"
+    Const Hori5 = "5", Hori6 = "6", Hori7 = "7", Hori8 = "8"
+    Const Hori9 = "9", Hori10 = "A", Hori11 = "B", Hori12 = "C"
+    Const Hori13 = "D", Hori14 = "E", Hori15 = "F", Hori16 = "G"
+    Const Hori17 = "H", Hori18 = "I", Hori19 = "J", Hori20 = "K"
+    Const Hori21 = "L", Hori22 = "M", Hori23 = "N", Hori24 = "O"
+
+'============Vertical expansion rate
+    Const Verti1 = "1", Verti2 = "2", Verti3 = "3", Verti4 = "4"
+    Const Verti5 = "5", Verti6 = "6", Verti7 = "7", Verti8 = "8"
+    Const Verti9 = "9", Verti10 = "A", Verti11 = "B", Verti12 = "C"
+    Const Verti13 = "D", Verti14 = "E", Verti15 = "F", Verti16 = "G"
+    Const Verti17 = "H", Verti18 = "I", Verti19 = "J", Verti20 = "K"
+    Const Verti21 = "L", Verti22 = "M", Verti23 = "N", Verti24 = "O"
+
+'============Font 9 일때 Size
+    Const Font0 = "000"
+    Const Font6 = "001", Font8 = "002", Font10 = "003", Font12 = "004"
+    Const Font14 = "005", Font18 = "006", Font24 = "007", Font30 = "008", Font36 = "009", Font48 = "010"
+
+    Const cFont6 = "101", cFont8 = "102", cFont10 = "103", cFont12 = "104"
+    Const cFont14 = "105", cFont18 = "106", cFont24 = "107", cFont30 = "108", cFont36 = "109", cFont48 = "110"
+
+'============Row Add
+    charRowAdd(5) = 10:    charRowAdd(6) = 18:    charRowAdd(8) = 20:    charRowAdd(10) = 23
+    charRowAdd(12) = 25:   charRowAdd(14) = 28:   charRowAdd(18) = 30:   charRowAdd(24) = 35
+    charRowAdd(30) = 43:   charRowAdd(36) = 48:   charRowAdd(48) = 78:
+    
+    Dim varRate     As String
+    varRate = "52"
+
+    sFormatTx = Chr(2) + "m" + vbCr
+    sFormatTx = sFormatTx + Chr(2) + "L" + vbCr
+    sFormatTx = sFormatTx + "D11" + vbCr
+    
+    ' 외부 Box 그리기           -- reserved --   -Row-    -Col-   -box- -수평길이+수직길이- -- line 폭 --
+    sFormatTx = sFormatTx + "1X11" + "000" + "0000" + "0030" + "b" + "0980" + "0950" + "0004" + "0004" + vbCr
+
+    
+    ' Barcode 줄 긋기    -- reserved --   -Row-    -Col-   -line-  -길이 + 두께-
+    
+    '2D QR Code Request by FRC CPL Liam 2020-06-05
+    'If GLO_COMP_CD = "FU" Then
+        'sFormatTx = sFormatTx & "3W1D66000042002902HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)
+    'End If
+
+    '2D BARCODE(QR CODE)    'aW a=3은 180도회전  ffff 높을수록 아래 gggg 높을수록 왼쪽으로, b,c = Module Size
+    'sFormatTx = sFormatTx & "3W1D33000030502302HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)  'FRC '2D QR Code Request by FRC CPL Liam 2020-06-05
+    'sFormatTx = sFormatTx & "3W1D55000063002202HM, " & C_ITEM_NO & ";" & Trim(Replace(varLotNo, "-", "")) & ";" & varUnitQty & ";" & varMFGDT & Chr$(13)
+
+    ' 가로줄 'Vertial Line
+    sFormatTx = sFormatTx + "1X11" + "000" + "0100" + "0030" + "l" + "0980" + "0004" + vbCr '1
+    
+    sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0030" + "l" + "0980" + "0004" + vbCr '2
+    If GLO_COMP_CD = "FU" Then
+        sFormatTx = sFormatTx + "1X11" + "000" + "0260" + "0030" + "l" + "0980" + "0004" + vbCr '3  300-260
+    Else
+        sFormatTx = sFormatTx + "1X11" + "000" + "0260" + "0030" + "l" + "0980" + "0004" + vbCr
+    End If
+    sFormatTx = sFormatTx + "1X11" + "000" + "0340" + "0030" + "l" + "0980" + "0004" + vbCr '4 0430-390 400-340
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0550" + "0030" + "l" + "0980" + "0004" + vbCr    test
+    
+    sFormatTx = sFormatTx + "1X11" + "000" + "0410" + "0030" + "l" + "0980" + "0004" + vbCr '5 550-510 510-470  470-410
+    sFormatTx = sFormatTx + "1X11" + "000" + "0530" + "0030" + "l" + "0980" + "0004" + vbCr '6 670-630  630-590   590-530
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0740" + "0030" + "l" + "0980" + "0004" + vbCr
+    sFormatTx = sFormatTx + "1X11" + "000" + "0660" + "0030" + "l" + "0980" + "0004" + vbCr ' 7 810-770 760-720  720-660
+    
+    sFormatTx = sFormatTx + "1X11" + "000" + "0780" + "0030" + "l" + "0980" + "0004" + vbCr ' 8  '810-780
+    
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0880" + "0030" + "l" + "0980" + "0004" + vbCr
+    sFormatTx = sFormatTx + "1X11" + "000" + "0900" + "0030" + "l" + "0980" + "0004" + vbCr ' 9
+    
+    '세로줄
+
+    'If GLO_COMP_CD = "FU" Then
+        'If Trim(Right(C_CUSTOM_CD, 10)) = "21311" Then
+            'sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0330" + "l" + "0004" + "0365" + vbCr
+        'Else
+            'sFormatTx = sFormatTx + "1X11" + "000" + "0190" + "0330" + "l" + "0004" + "0240" + vbCr
+        'End If
+    'End If
+ 
+       'Vertial Line #3
+ '  sFormatTx = sFormatTx + "1X11" + "000" + "0760" + "0300" + "l" + "0004" + "0135" + vbCr
+       'Vertial Line #3
+  '  sFormatTx = sFormatTx + "1X11" + "000" + "0760" + "0480" + "l" + "0004" + "0135" + vbCr
+    '                                         Y                                LONG
+        
+    'Vertial Line #2
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0430" + "0330" + "l" + "0004" + "0120" + vbCr
+    'sFormatTx = sFormatTx + "1X11" + "000" + "0430" + "0245" + "l" + "0004" + "0380" + vbCr
+    'Vertial Line #1                          strat    v-position              Height
+    sFormatTx = sFormatTx + "1X11" + "000" + "0000" + "0760" + "l" + "0004" + "0950" + vbCr
+        
+        
+   '1 Title
+    sFormatTx = sFormatTx + Angle180 + "911" + "005" + "0080" + "0980"
+    sFormatTx = sFormatTx + "Supplier" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "005" + "0080" + "0670" '570-670
+    sFormatTx = sFormatTx + "PEAK SHIPPING LABEL" + vbCr     '20220718 JJ  PEAK ->  PEAK SHIPPING LABEL
+   '2 CUSTOMER
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0170" + "0980"
+    sFormatTx = sFormatTx + "CUSTOMER:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0170" + "0740"
+    If Trim(Right(C_CUSTOM_CD, 10)) = "22206" Then
+        sFormatTx = sFormatTx + "MICRON Memory Malasia Sdn Bhd" + vbCr
+    Else
+        sFormatTx = sFormatTx + Trim(Left(C_CUSTOM_CD, 30)) + vbCr
+    End If
+         
+    'PEAK P/N
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0250" + "0980" '260-250
+    sFormatTx = sFormatTx + "PEAK P/N:" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0265" + "0740"  'Code 128
+    'sFormatTx = sFormatTx & "B" & varOEMiPART_NO + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0250" + "0740"   'JJ"0305"->0260 260-250
+    sFormatTx = sFormatTx & varOEMiPART_NO & vbCr
+ 
+    'PEAK DWG
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0320" + "0980"  '380-320
+    sFormatTx = sFormatTx + "PEAK DWG#" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0625" + "0740"  'Code 128
+    'sFormatTx = sFormatTx & "B" & I_DESC_NM + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0320" + "0740"  '---420  ->380(40) 380-320
+    sFormatTx = sFormatTx & I_DESC_NM & vbCr
+  
+    'CUST'R PO
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0400" + "0980" '500-460  460-400
+    sFormatTx = sFormatTx + "CUST'R PO#:" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0505" + "0740"  'Code 128
+    'sFormatTx = sFormatTx & "B" & C_PO_NO + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0400" + "0740" '545-505'505-460  460-400
+    sFormatTx = sFormatTx & C_PO_NO & vbCr
+ 
+    'PEAK DWG
+  '  sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0620" + "0980"
+  '  sFormatTx = sFormatTx + "PEAK DWG#" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0625" + "0740"  'Code 128
+    'sFormatTx = sFormatTx & "B" & I_DESC_NM + vbCr
+  '  sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0670" + "0740"
+  '  sFormatTx = sFormatTx & I_DESC_NM & vbCr
+ 
+    'CUST'R P/N
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0500" + "0980" '620-580 580-500
+    sFormatTx = sFormatTx + "CUST'R P/N#:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0485" + "0740"  'Code 128'625-585  585-545 545-485
+    sFormatTx = sFormatTx & "B" & C_ITEM_NO + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0530" + "0740" '670-630'  630-590 590-530
+    sFormatTx = sFormatTx + C_ITEM_NO + vbCr
+ 
+    'LOT NO (P+YMMDDXX) : XX = 출하횟수 -> 20170918 실제 LOT 표시 ihson
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0610" + "0980" '750-710  710-670 670-610
+    sFormatTx = sFormatTx + "LOT NO#" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "070" + "0605" + "0740"  'Code 128'755-705 705-665 665-605
+    sFormatTx = sFormatTx & "B" & Replace(varLotNo, "-", "") & "-" & Format(SHIP_DATE, "mm/dd/yy") & vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0650" + "0740" '800-760'760-750 750-710  710-650
+    'sFormatTx = sFormatTx + Replace(varLotNo, "-", "") + "-" + Format(SHIP_DATE, "mm/dd/yy") & vbCr
+    sFormatTx = sFormatTx + Replace(varLotNo, "-", "") & vbCr  'jj202207
+ 
+    'MFG Date
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0730" + "0980"   'NEED TEST'0320-0980  850-770 770-710 710-730
+    sFormatTx = sFormatTx + "MFG DATE:" + vbCr
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "060" + "0720" + "0740"  'Code 128  varMFGDT  070-060 845-765 765-705 705-715 715-720
+    sFormatTx = sFormatTx & "B" & varMFGDT + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0770" + "0740" '--0200-0740 varMFGDT  885-805 805-745 745-765
+    sFormatTx = sFormatTx + varMFGDT + vbCr
+   
+   
+   
+    'EXP Date
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0870" + "0980"   'NEED TEST'0620-0550  550-450 0450-0980 900-870
+    sFormatTx = sFormatTx + "EXP DATE:" + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "e" + varRate + "060" + "0845" + "0740"  'Code 128  070-050 900-840
+    'sFormatTx = sFormatTx & "B" & varEXPDT + vbCr
+    'sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0900" + "0740" '920-880 880-900
+    'sFormatTx = sFormatTx + varEXPDT + vbCr
+
+
+    varEXPDT = DateAdd("yyyy", 3, varMFGDT)   'JJ202207
+    varEXPDT = Replace(varEXPDT, "-", "/")    'JJ202207
+  
+
+    sFormatTx = sFormatTx + Angle180 + "e" + varRate + "060" + "0845" + "0740"  'Code 128  070-050 900-840
+    sFormatTx = sFormatTx & "B" & varEXPDT + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0900" + "0740" '920-880 880-900
+    sFormatTx = sFormatTx + varEXPDT + vbCr
+
+
+ 
+    
+    
+'---- DOWN OK
+ 
+    'C/NO
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0950" + "0980" '885->955
+    sFormatTx = sFormatTx + "C/NO:" + vbCr
+    
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0950" + "0860" '885->955
+    sFormatTx = sFormatTx & varCartonNo & vbCr
+    
+    'COO
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0950" + "0740" '885->955  JJ20220720
+    sFormatTx = sFormatTx + "COO: " + vbCr
+    sFormatTx = sFormatTx + Angle180 + "911" + "003" + "0950" + "0600" '885->955
+    sFormatTx = sFormatTx & "MADE IN TAIWAN" + vbCr
+    
+    sFormatTx = sFormatTx + "E" + vbCr
+
+End Sub

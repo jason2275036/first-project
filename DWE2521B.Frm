@@ -3136,11 +3136,6 @@ Private Sub C_CUSTOM_CD_Click()
         lblLot_Seq.Visible = True
         lblLot_Seq.Caption = "RT#"
     End If
-    If Trim(Right(C_PROD_KB, 10)) = "VH" Then   'Cover Tape (SPIL) 의 경우만 ZEBRA PRT (300DPI)를 사용한다. (추후 조정가능)
-        PRT_PORT(2).Enabled = True
-    Else    'DATAMAX PRT 203DPI default
-        PRT_PORT(2).Enabled = False
-    End If
     
 End Sub
 
